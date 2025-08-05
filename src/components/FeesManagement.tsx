@@ -2,850 +2,1024 @@ import React, { useState } from 'react';
 import {
   Box,
   Typography,
+  Container,
+  Paper,
   Tabs,
   Tab,
+  Grid,
   Card,
   CardContent,
   Button,
-  Grid,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
   MenuItem,
-  Chip,
-  IconButton,
-  Container,
-  Avatar,
   FormControl,
   InputLabel,
   Select,
+  Chip,
+  IconButton,
+  Divider,
   Alert,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  SelectChangeEvent
 } from '@mui/material';
 import {
-  AttachMoney as MoneyIcon,
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Receipt as ReceiptIcon,
-  Payment as PaymentIcon,
-  Visibility as ViewIcon,
-  Print as PrintIcon,
+  Payment,
+  Receipt,
+  AttachMoney,
+  Assignment,
+  Add,
+  Edit,
+  Delete,
+  Print,
+  CurrencyRupee,
+  ReceiptLong,
+  AccountBalance,
+  ViewList,
+  Save,
+  Cancel
 } from '@mui/icons-material';
 
-interface FeeStructure {
-  id: number;
-  class: string;
-  feeType: 'Tuition' | 'Transport' | 'Library' | 'Sports' | 'Annual';
-  amount: number;
-  dueDate: string;
-  status: 'Active' | 'Inactive';
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
 }
 
-interface StudentFee {
-  id: number;
-  studentName: string;
-  rollNumber: string;
-  class: string;
-  section: string;
-  feeType: string;
-  totalAmount: number;
-  paidAmount: number;
-  pendingAmount: number;
-  dueDate: string;
-  status: 'Paid' | 'Pending' | 'Overdue' | 'Partial';
-  lastPaymentDate?: string;
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`fees-tabpanel-${index}`}
+      aria-labelledby={`fees-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
 }
 
-interface Payment {
-  id: number;
-  studentId: number;
-  studentName: string;
-  rollNumber: string;
-  amount: number;
-  paymentDate: string;
-  paymentMethod: 'Cash' | 'Bank Transfer' | 'Online' | 'Cheque';
-  receiptNumber: string;
-  feeType: string;
-  status: 'Success' | 'Pending' | 'Failed';
+// Mock data for fee structure
+const mockFeeStructure = [
+  { id: 1, class: '1st Standard', category: 'Tuition Fee', amount: 10000, frequency: 'Monthly', dueDay: 10 },
+  { id: 2, class: '1st Standard', category: 'Development Fee', amount: 5000, frequency: 'Annual', dueDay: 15 },
+  { id: 3, class: '2nd Standard', category: 'Tuition Fee', amount: 12000, frequency: 'Monthly', dueDay: 10 },
+  { id: 4, class: '2nd Standard', category: 'Development Fee', amount: 6000, frequency: 'Annual', dueDay: 15 },
+  { id: 5, class: '3rd Standard', category: 'Tuition Fee', amount: 14000, frequency: 'Monthly', dueDay: 10 },
+  { id: 6, class: '3rd Standard', category: 'Development Fee', amount: 7000, frequency: 'Annual', dueDay: 15 },
+];
+
+// Mock data for student payments
+const mockPayments = [
+  { id: 1, studentId: 'STU001', studentName: 'Rahul Sharma', class: '1st Standard', amount: 10000, category: 'Tuition Fee', paymentDate: '2025-07-05', paymentMode: 'Online', status: 'Paid', receiptNo: 'RCP00123' },
+  { id: 2, studentId: 'STU002', studentName: 'Priya Patel', class: '2nd Standard', amount: 12000, category: 'Tuition Fee', paymentDate: '2025-07-08', paymentMode: 'Cash', status: 'Paid', receiptNo: 'RCP00124' },
+  { id: 3, studentId: 'STU003', studentName: 'Amit Kumar', class: '3rd Standard', amount: 14000, category: 'Tuition Fee', paymentDate: null, paymentMode: null, status: 'Pending', receiptNo: null },
+  { id: 4, studentId: 'STU004', studentName: 'Sneha Gupta', class: '1st Standard', amount: 5000, category: 'Development Fee', paymentDate: '2025-04-10', paymentMode: 'Cheque', status: 'Paid', receiptNo: 'RCP00100' },
+  { id: 5, studentId: 'STU005', studentName: 'Vikram Singh', class: '2nd Standard', amount: 6000, category: 'Development Fee', paymentDate: null, paymentMode: null, status: 'Pending', receiptNo: null },
+];
+
+// Mock data for fee categories
+const feeCategories = ['Tuition Fee', 'Development Fee', 'Computer Fee', 'Library Fee', 'Examination Fee', 'Sports Fee', 'Transport Fee'];
+
+// Mock data for classes
+const classes = ['Nursery', 'KG', '1st Standard', '2nd Standard', '3rd Standard', '4th Standard', '5th Standard', '6th Standard', '7th Standard', '8th Standard', '9th Standard', '10th Standard'];
+
+// Mock data for payment modes
+const paymentModes = ['Cash', 'Cheque', 'Online', 'UPI', 'Bank Transfer'];
+
+// Mock data for payment frequency
+const frequencies = ['Monthly', 'Quarterly', 'Half-Yearly', 'Annual'];
+
+interface FeesManagementProps {
+  readOnly?: boolean;
 }
 
-// Function to get initial fee structures from localStorage
-const getInitialFeeStructures = (): FeeStructure[] => {
-  try {
-    const savedFeeStructures = localStorage.getItem('school-erp-fee-structures');
-    if (savedFeeStructures) {
-      return JSON.parse(savedFeeStructures);
-    }
-  } catch (error) {
-    console.error('Error loading fee structures from localStorage:', error);
-  }
-  
-  // Default fee structures if localStorage is empty or error
-  return [
-    {
-      id: 1,
-      class: '10th',
-      feeType: 'Tuition',
-      amount: 15000,
-      dueDate: '2025-09-10',
-      status: 'Active'
-    },
-    {
-      id: 2,
-      class: '10th',
-      feeType: 'Transport',
-      amount: 3000,
-      dueDate: '2025-09-10',
-      status: 'Active'
-    },
-    {
-      id: 3,
-      class: '9th',
-      feeType: 'Tuition',
-      amount: 12000,
-      dueDate: '2025-09-10',
-      status: 'Active'
-    },
-    {
-      id: 4,
-      class: '10th',
-      feeType: 'Annual',
-      amount: 5000,
-      dueDate: '2025-08-30',
-      status: 'Active'
-    }
-  ];
-};
-
-// Function to save fee structures to localStorage
-const saveFeeStructuresToStorage = (feeStructuresList: FeeStructure[]) => {
-  try {
-    localStorage.setItem('school-erp-fee-structures', JSON.stringify(feeStructuresList));
-  } catch (error) {
-    console.error('Error saving fee structures to localStorage:', error);
-  }
-};
-
-// Function to get initial student fees from localStorage
-const getInitialStudentFees = (): StudentFee[] => {
-  try {
-    const savedStudentFees = localStorage.getItem('school-erp-student-fees');
-    if (savedStudentFees) {
-      return JSON.parse(savedStudentFees);
-    }
-  } catch (error) {
-    console.error('Error loading student fees from localStorage:', error);
-  }
-  
-  // Default student fees if localStorage is empty or error
-  return [
-    {
-      id: 1,
-      studentName: 'राहुल शर्मा',
-      rollNumber: 'STU001',
-      class: '10th',
-      section: 'A',
-      feeType: 'Tuition Fee',
-      totalAmount: 15000,
-      paidAmount: 15000,
-      pendingAmount: 0,
-      dueDate: '2025-09-10',
-      status: 'Paid',
-      lastPaymentDate: '2025-08-01'
-    },
-    {
-      id: 2,
-      studentName: 'प्रिया गुप्ता',
-      rollNumber: 'STU002',
-      class: '10th',
-      section: 'B',
-      feeType: 'Tuition Fee',
-      totalAmount: 15000,
-      paidAmount: 10000,
-      pendingAmount: 5000,
-      dueDate: '2025-09-10',
-      status: 'Partial',
-      lastPaymentDate: '2025-07-15'
-    },
-    {
-      id: 3,
-      studentName: 'अमित कुमार',
-      rollNumber: 'STU003',
-      class: '9th',
-      section: 'A',
-      feeType: 'Tuition Fee',
-      totalAmount: 12000,
-      paidAmount: 0,
-      pendingAmount: 12000,
-      dueDate: '2025-08-10',
-      status: 'Overdue'
-    },
-    {
-      id: 4,
-      studentName: 'सुनीता वर्मा',
-      rollNumber: 'STU004',
-      class: '10th',
-      section: 'A',
-      feeType: 'Transport Fee',
-      totalAmount: 3000,
-      paidAmount: 0,
-      pendingAmount: 3000,
-      dueDate: '2025-09-15',
-      status: 'Pending'
-    }
-  ];
-};
-
-// Function to save student fees to localStorage
-const saveStudentFeesToStorage = (studentFeesList: StudentFee[]) => {
-  try {
-    localStorage.setItem('school-erp-student-fees', JSON.stringify(studentFeesList));
-  } catch (error) {
-    console.error('Error saving student fees to localStorage:', error);
-  }
-};
-
-// Function to get initial payments from localStorage
-const getInitialPayments = (): Payment[] => {
-  try {
-    const savedPayments = localStorage.getItem('school-erp-payments');
-    if (savedPayments) {
-      return JSON.parse(savedPayments);
-    }
-  } catch (error) {
-    console.error('Error loading payments from localStorage:', error);
-  }
-  
-  // Default payments if localStorage is empty or error
-  return [
-    {
-      id: 1,
-      studentId: 1,
-      studentName: 'राहुल शर्मा',
-      rollNumber: 'STU001',
-      amount: 15000,
-      paymentDate: '2025-08-01',
-      paymentMethod: 'Online',
-      receiptNumber: 'REC001',
-      feeType: 'Tuition Fee',
-      status: 'Success'
-    },
-    {
-      id: 2,
-      studentId: 2,
-      studentName: 'प्रिया गुप्ता',
-      rollNumber: 'STU002',
-      amount: 10000,
-      paymentDate: '2025-07-15',
-      paymentMethod: 'Bank Transfer',
-      receiptNumber: 'REC002',
-      feeType: 'Tuition Fee',
-      status: 'Success'
-    }
-  ];
-};
-
-// Function to save payments to localStorage
-const savePaymentsToStorage = (paymentsList: Payment[]) => {
-  try {
-    localStorage.setItem('school-erp-payments', JSON.stringify(paymentsList));
-  } catch (error) {
-    console.error('Error saving payments to localStorage:', error);
-  }
-};
-
-const FeesManagement: React.FC = () => {
+const FeesManagement: React.FC<FeesManagementProps> = ({ readOnly = false }) => {
   const [tabValue, setTabValue] = useState(0);
-  
-  const [feeStructures, setFeeStructures] = useState<FeeStructure[]>(getInitialFeeStructures());
-  const [studentFees, setStudentFees] = useState<StudentFee[]>(getInitialStudentFees());
-  const [payments, setPayments] = useState<Payment[]>(getInitialPayments());
-
-  const [open, setOpen] = useState(false);
-  const [paymentOpen, setPaymentOpen] = useState(false);
-  const [editingFee, setEditingFee] = useState<FeeStructure | null>(null);
-  const [selectedStudentForPayment, setSelectedStudentForPayment] = useState<StudentFee | null>(null);
-  
-  const [formData, setFormData] = useState<Partial<FeeStructure>>({
+  const [feeStructure, setFeeStructure] = useState(mockFeeStructure);
+  const [payments, setPayments] = useState(mockPayments);
+  const [editFeeItem, setEditFeeItem] = useState<any>(null);
+  const [newPayment, setNewPayment] = useState({
+    studentId: '',
+    studentName: '',
     class: '',
-    feeType: 'Tuition',
     amount: 0,
-    dueDate: '',
-    status: 'Active'
+    category: '',
+    paymentDate: '',
+    paymentMode: '',
+    status: 'Paid',
+  });
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isNewFeeDialogOpen, setIsNewFeeDialogOpen] = useState(false);
+  const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
+  const [newFee, setNewFee] = useState({
+    class: '',
+    category: '',
+    amount: 0,
+    frequency: 'Monthly',
+    dueDay: 10,
   });
 
-  const [paymentData, setPaymentData] = useState({
-    amount: 0,
-    paymentMethod: 'Cash' as 'Cash' | 'Bank Transfer' | 'Online' | 'Cheque',
-    receiptNumber: ''
-  });
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
-  const handleOpen = (fee?: FeeStructure) => {
-    if (fee) {
-      setEditingFee(fee);
-      setFormData(fee);
-    } else {
-      setEditingFee(null);
-      setFormData({
-        class: '',
-        feeType: 'Tuition',
-        amount: 0,
-        dueDate: '',
-        status: 'Active'
-      });
+  const handleEditFee = (fee: any) => {
+    setEditFeeItem(fee);
+  };
+
+  const handleSaveEditedFee = () => {
+    if (editFeeItem) {
+      setFeeStructure(feeStructure.map(fee => 
+        fee.id === editFeeItem.id ? editFeeItem : fee
+      ));
+      setEditFeeItem(null);
     }
-    setOpen(true);
   };
 
-  const handleClose = () => {
-    setOpen(false);
-    setEditingFee(null);
-    setFormData({});
+  const handleDeleteFee = (id: number) => {
+    setFeeStructure(feeStructure.filter(fee => fee.id !== id));
   };
 
-  const handleSubmit = () => {
-    if (editingFee) {
-      const updatedFeeStructures = feeStructures.map(f => 
-        f.id === editingFee.id 
-          ? { ...editingFee, ...formData }
-          : f
-      );
-      setFeeStructures(updatedFeeStructures);
-      saveFeeStructuresToStorage(updatedFeeStructures);
-    } else {
-      const newFee: FeeStructure = {
-        id: Math.max(...feeStructures.map(f => f.id)) + 1,
-        class: formData.class || '',
-        feeType: formData.feeType as any || 'Tuition',
-        amount: formData.amount || 0,
-        dueDate: formData.dueDate || '',
-        status: formData.status as 'Active' | 'Inactive' || 'Active'
-      };
-      const updatedFeeStructures = [...feeStructures, newFee];
-      setFeeStructures(updatedFeeStructures);
-      saveFeeStructuresToStorage(updatedFeeStructures);
-    }
-    handleClose();
+  const handleOpenNewFeeDialog = () => {
+    setIsNewFeeDialogOpen(true);
   };
 
-  const handleDelete = (id: number) => {
-    const updatedFeeStructures = feeStructures.filter(f => f.id !== id);
-    setFeeStructures(updatedFeeStructures);
-    saveFeeStructuresToStorage(updatedFeeStructures);
+  const handleCloseNewFeeDialog = () => {
+    setIsNewFeeDialogOpen(false);
   };
 
-  const handlePayment = (studentFee: StudentFee) => {
-    setSelectedStudentForPayment(studentFee);
-    setPaymentData({
-      amount: studentFee.pendingAmount,
-      paymentMethod: 'Cash',
-      receiptNumber: `REC${String(payments.length + 1).padStart(3, '0')}`
+  const handleAddNewFee = () => {
+    const newId = Math.max(...feeStructure.map(fee => fee.id)) + 1;
+    const feeToAdd = {
+      id: newId,
+      ...newFee
+    };
+    
+    setFeeStructure([...feeStructure, feeToAdd]);
+    setNewFee({
+      class: '',
+      category: '',
+      amount: 0,
+      frequency: 'Monthly',
+      dueDay: 10,
     });
-    setPaymentOpen(true);
+    setIsNewFeeDialogOpen(false);
   };
 
-  const handlePaymentSubmit = () => {
-    if (selectedStudentForPayment) {
-      const newPayment: Payment = {
-        id: Math.max(...payments.map(p => p.id)) + 1,
-        studentId: selectedStudentForPayment.id,
-        studentName: selectedStudentForPayment.studentName,
-        rollNumber: selectedStudentForPayment.rollNumber,
-        amount: paymentData.amount,
-        paymentDate: new Date().toISOString().split('T')[0],
-        paymentMethod: paymentData.paymentMethod,
-        receiptNumber: paymentData.receiptNumber,
-        feeType: selectedStudentForPayment.feeType,
-        status: 'Success'
-      };
-
-      const updatedPayments = [...payments, newPayment];
-      setPayments(updatedPayments);
-      savePaymentsToStorage(updatedPayments);
-
-      // Update student fee status
-      const updatedStudentFees = studentFees.map(sf => 
-        sf.id === selectedStudentForPayment.id 
-          ? {
-              ...sf,
-              paidAmount: sf.paidAmount + paymentData.amount,
-              pendingAmount: sf.pendingAmount - paymentData.amount,
-              status: (sf.pendingAmount - paymentData.amount) === 0 ? 'Paid' as const : 'Partial' as const,
-              lastPaymentDate: new Date().toISOString().split('T')[0]
-            }
-          : sf
-      );
-      setStudentFees(updatedStudentFees);
-      saveStudentFeesToStorage(updatedStudentFees);
-    }
-    setPaymentOpen(false);
+  const handleNewFeeTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setNewFee({
+      ...newFee,
+      [name]: name === 'amount' || name === 'dueDay' ? Number(value) : value,
+    });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Paid': return 'success';
-      case 'Pending': return 'warning';
-      case 'Overdue': return 'error';
-      case 'Partial': return 'info';
-      case 'Active': return 'success';
-      default: return 'default';
-    }
+  const handleNewFeeSelectChange = (e: SelectChangeEvent) => {
+    const { name, value } = e.target;
+    setNewFee({
+      ...newFee,
+      [name]: value,
+    });
   };
 
-  const getPaymentMethodColor = (method: string) => {
-    switch (method) {
-      case 'Online': return 'success';
-      case 'Bank Transfer': return 'info';
-      case 'Cash': return 'warning';
-      case 'Cheque': return 'secondary';
-      default: return 'default';
-    }
+  const handleOpenPaymentDialog = () => {
+    setIsDialogOpen(true);
   };
 
-  const totalPendingAmount = studentFees.reduce((total, fee) => total + fee.pendingAmount, 0);
-  const totalPaidAmount = studentFees.reduce((total, fee) => total + fee.paidAmount, 0);
+  const handleClosePaymentDialog = () => {
+    setIsDialogOpen(false);
+  };
+
+  const handlePaymentTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setNewPayment({
+      ...newPayment,
+      [name]: name === 'amount' ? Number(value) : value,
+    });
+  };
+
+  const handlePaymentSelectChange = (e: SelectChangeEvent) => {
+    const { name, value } = e.target;
+    setNewPayment({
+      ...newPayment,
+      [name]: value,
+    });
+  };
+
+  const handleAddPayment = () => {
+    const newId = Math.max(...payments.map(payment => payment.id)) + 1;
+    const newReceiptNo = `RCP${String(newId + 1000).slice(1)}`;
+    
+    const paymentToAdd = {
+      id: newId,
+      ...newPayment,
+      status: 'Paid',
+      receiptNo: newReceiptNo,
+    };
+    
+    setPayments([...payments, paymentToAdd]);
+    setNewPayment({
+      studentId: '',
+      studentName: '',
+      class: '',
+      amount: 0,
+      category: '',
+      paymentDate: '',
+      paymentMode: '',
+      status: 'Paid',
+    });
+    setIsDialogOpen(false);
+  };
+
+  const handleViewReceipt = (payment: any) => {
+    setSelectedReceipt(payment);
+    setIsReceiptDialogOpen(true);
+  };
+
+  const handleCloseReceiptDialog = () => {
+    setIsReceiptDialogOpen(false);
+  };
+
+  const handlePrintReceipt = () => {
+    alert('Printing receipt...');
+    // In a real app, this would handle the print functionality
+  };
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <MoneyIcon sx={{ mr: 2, fontSize: 32, color: 'primary.main' }} />
-            <Typography variant="h4" component="h1">
-              फीस प्रबंधन (Fees Management)
-            </Typography>
-          </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpen()}
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Paper elevation={3} sx={{ minHeight: '80vh' }}>
+        <Typography variant="h4" sx={{ p: 3, bgcolor: 'primary.main', color: 'white' }}>
+          Fees Management
+        </Typography>
+        
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs 
+            value={tabValue} 
+            onChange={handleTabChange} 
+            aria-label="fees management tabs"
+            variant="scrollable"
+            scrollButtons="auto"
           >
-            फीस संरचना जोड़ें
-          </Button>
-        </Box>
-
-        {/* Statistics Cards */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ textAlign: 'center', bgcolor: 'success.main', color: 'white' }}>
-              <CardContent>
-                <Typography variant="h5" fontWeight="bold">
-                  ₹{totalPaidAmount.toLocaleString()}
-                </Typography>
-                <Typography variant="body2">कुल संग्रहीत</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ textAlign: 'center', bgcolor: 'error.main', color: 'white' }}>
-              <CardContent>
-                <Typography variant="h5" fontWeight="bold">
-                  ₹{totalPendingAmount.toLocaleString()}
-                </Typography>
-                <Typography variant="body2">कुल बकाया</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ textAlign: 'center', bgcolor: 'warning.main', color: 'white' }}>
-              <CardContent>
-                <Typography variant="h5" fontWeight="bold">
-                  {studentFees.filter(f => f.status === 'Overdue').length}
-                </Typography>
-                <Typography variant="body2">देरी से छात्र</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ textAlign: 'center', bgcolor: 'info.main', color: 'white' }}>
-              <CardContent>
-                <Typography variant="h5" fontWeight="bold">
-                  {studentFees.filter(f => f.status === 'Paid').length}
-                </Typography>
-                <Typography variant="body2">भुगतान किए गए छात्र</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        {/* Tabs */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Tabs value={tabValue} onChange={handleTabChange} variant="fullWidth">
-            <Tab 
-              label="फीस संरचना" 
-              icon={<MoneyIcon />} 
-              iconPosition="start"
-            />
-            <Tab 
-              label="छात्र फीस" 
-              icon={<ReceiptIcon />} 
-              iconPosition="start"
-            />
-            <Tab 
-              label="भुगतान इतिहास" 
-              icon={<PaymentIcon />} 
-              iconPosition="start"
-            />
+            <Tab icon={<AttachMoney />} label="Fee Structure" />
+            <Tab icon={<Receipt />} label="Payments" />
+            <Tab icon={<Assignment />} label="Fee Reports" />
+            <Tab icon={<AccountBalance />} label="Fee Statistics" />
           </Tabs>
         </Box>
-
+        
         {/* Fee Structure Tab */}
-        {tabValue === 0 && (
-          <Paper elevation={3}>
-            <TableContainer>
-              <Table>
-                <TableHead sx={{ bgcolor: 'grey.100' }}>
-                  <TableRow>
-                    <TableCell><strong>कक्षा</strong></TableCell>
-                    <TableCell><strong>फीस प्रकार</strong></TableCell>
-                    <TableCell><strong>राशि</strong></TableCell>
-                    <TableCell><strong>नियत तारीख</strong></TableCell>
-                    <TableCell><strong>स्थिति</strong></TableCell>
-                    <TableCell><strong>क्रियाएं</strong></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {feeStructures.map((fee) => (
-                    <TableRow key={fee.id} hover>
-                      <TableCell>
-                        <Chip label={fee.class} color="primary" variant="outlined" size="small" />
-                      </TableCell>
-                      <TableCell>{fee.feeType}</TableCell>
-                      <TableCell>
-                        <Typography variant="body1" fontWeight="bold" color="success.main">
-                          ₹{fee.amount.toLocaleString()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>{fee.dueDate}</TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={fee.status} 
-                          color={fee.status === 'Active' ? 'success' : 'error'} 
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <IconButton 
-                          color="primary" 
-                          onClick={() => handleOpen(fee)}
-                          size="small"
-                          sx={{ mr: 1 }}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton 
-                          color="error" 
-                          onClick={() => handleDelete(fee.id)}
-                          size="small"
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        )}
-
-        {/* Student Fees Tab */}
-        {tabValue === 1 && (
-          <Paper elevation={3}>
-            <TableContainer>
-              <Table>
-                <TableHead sx={{ bgcolor: 'grey.100' }}>
-                  <TableRow>
-                    <TableCell><strong>छात्र</strong></TableCell>
-                    <TableCell><strong>कक्षा/अनुभाग</strong></TableCell>
-                    <TableCell><strong>फीस प्रकार</strong></TableCell>
-                    <TableCell><strong>कुल राशि</strong></TableCell>
-                    <TableCell><strong>भुगतान की गई राशि</strong></TableCell>
-                    <TableCell><strong>बकाया राशि</strong></TableCell>
-                    <TableCell><strong>नियत तारीख</strong></TableCell>
-                    <TableCell><strong>स्थिति</strong></TableCell>
-                    <TableCell><strong>क्रियाएं</strong></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {studentFees.map((studentFee) => (
-                    <TableRow key={studentFee.id} hover>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Avatar sx={{ mr: 2, width: 32, height: 32, bgcolor: 'primary.main' }}>
-                            {studentFee.studentName.charAt(0)}
-                          </Avatar>
-                          <Box>
-                            <Typography variant="body1">{studentFee.studentName}</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {studentFee.rollNumber}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell>{studentFee.class} - {studentFee.section}</TableCell>
-                      <TableCell>{studentFee.feeType}</TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          ₹{studentFee.totalAmount.toLocaleString()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="success.main" fontWeight="bold">
-                          ₹{studentFee.paidAmount.toLocaleString()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="error.main" fontWeight="bold">
-                          ₹{studentFee.pendingAmount.toLocaleString()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>{studentFee.dueDate}</TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={studentFee.status} 
-                          color={getStatusColor(studentFee.status) as any} 
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {studentFee.status !== 'Paid' && (
-                          <Button
-                            variant="contained"
-                            size="small"
-                            startIcon={<PaymentIcon />}
-                            color={studentFee.status === 'Overdue' ? 'error' : 'primary'}
-                            onClick={() => handlePayment(studentFee)}
-                            sx={{ mr: 1 }}
+        <TabPanel value={tabValue} index={0}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="h6">Fee Structure</Typography>
+            {!readOnly && (
+              <Button 
+                variant="contained" 
+                startIcon={<Add />}
+                onClick={handleOpenNewFeeDialog}
+              >
+                Add Fee
+              </Button>
+            )}
+          </Box>
+          
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: 'primary.light' }}>
+                  <TableCell>Class</TableCell>
+                  <TableCell>Fee Category</TableCell>
+                  <TableCell align="right">Amount (₹)</TableCell>
+                  <TableCell>Frequency</TableCell>
+                  <TableCell>Due Day</TableCell>
+                  {!readOnly && <TableCell align="center">Actions</TableCell>}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {feeStructure.map((fee) => (
+                  <TableRow key={fee.id}>
+                    <TableCell>
+                      {editFeeItem && editFeeItem.id === fee.id ? (
+                        <FormControl fullWidth size="small">
+                          <Select
+                            value={editFeeItem.class}
+                            onChange={(e) => setEditFeeItem({...editFeeItem, class: e.target.value})}
                           >
-                            {studentFee.status === 'Overdue' ? 'अभी भुगतान करें' : 'भुगतान करें'}
-                          </Button>
+                            {classes.map((c) => (
+                              <MenuItem key={c} value={c}>{c}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      ) : (
+                        fee.class
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editFeeItem && editFeeItem.id === fee.id ? (
+                        <FormControl fullWidth size="small">
+                          <Select
+                            value={editFeeItem.category}
+                            onChange={(e) => setEditFeeItem({...editFeeItem, category: e.target.value})}
+                          >
+                            {feeCategories.map((category) => (
+                              <MenuItem key={category} value={category}>{category}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      ) : (
+                        fee.category
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      {editFeeItem && editFeeItem.id === fee.id ? (
+                        <TextField
+                          type="number"
+                          size="small"
+                          value={editFeeItem.amount}
+                          onChange={(e) => setEditFeeItem({...editFeeItem, amount: Number(e.target.value)})}
+                          InputProps={{
+                            startAdornment: <CurrencyRupee fontSize="small" />
+                          }}
+                        />
+                      ) : (
+                        `₹${fee.amount.toLocaleString()}`
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editFeeItem && editFeeItem.id === fee.id ? (
+                        <FormControl fullWidth size="small">
+                          <Select
+                            value={editFeeItem.frequency}
+                            onChange={(e) => setEditFeeItem({...editFeeItem, frequency: e.target.value})}
+                          >
+                            {frequencies.map((freq) => (
+                              <MenuItem key={freq} value={freq}>{freq}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      ) : (
+                        fee.frequency
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editFeeItem && editFeeItem.id === fee.id ? (
+                        <TextField
+                          type="number"
+                          size="small"
+                          value={editFeeItem.dueDay}
+                          onChange={(e) => setEditFeeItem({...editFeeItem, dueDay: Number(e.target.value)})}
+                          inputProps={{ min: 1, max: 31 }}
+                        />
+                      ) : (
+                        `${fee.dueDay}${getDaySuffix(fee.dueDay)} of the month`
+                      )}
+                    </TableCell>
+                    {!readOnly && (
+                      <TableCell align="center">
+                        {editFeeItem && editFeeItem.id === fee.id ? (
+                          <>
+                            <IconButton color="primary" onClick={handleSaveEditedFee}>
+                              <Save />
+                            </IconButton>
+                            <IconButton color="error" onClick={() => setEditFeeItem(null)}>
+                              <Cancel />
+                            </IconButton>
+                          </>
+                        ) : (
+                          <>
+                            <IconButton color="primary" onClick={() => handleEditFee(fee)}>
+                              <Edit />
+                            </IconButton>
+                            <IconButton color="error" onClick={() => handleDeleteFee(fee.id)}>
+                              <Delete />
+                            </IconButton>
+                          </>
                         )}
-                        <IconButton color="primary" size="small">
-                          <ViewIcon />
-                        </IconButton>
                       </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        )}
-
-        {/* Payment History Tab */}
-        {tabValue === 2 && (
-          <Paper elevation={3}>
-            <TableContainer>
-              <Table>
-                <TableHead sx={{ bgcolor: 'grey.100' }}>
-                  <TableRow>
-                    <TableCell><strong>रसीद संख्या</strong></TableCell>
-                    <TableCell><strong>छात्र</strong></TableCell>
-                    <TableCell><strong>राशि</strong></TableCell>
-                    <TableCell><strong>भुगतान तिथि</strong></TableCell>
-                    <TableCell><strong>भुगतान विधि</strong></TableCell>
-                    <TableCell><strong>फीस प्रकार</strong></TableCell>
-                    <TableCell><strong>स्थिति</strong></TableCell>
-                    <TableCell><strong>क्रियाएं</strong></TableCell>
+                    )}
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {payments.map((payment) => (
-                    <TableRow key={payment.id} hover>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight="bold">
-                          {payment.receiptNumber}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body1">{payment.studentName}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {payment.rollNumber}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography color="success.main" fontWeight="bold">
-                          ₹{payment.amount.toLocaleString()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>{payment.paymentDate}</TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={payment.paymentMethod} 
-                          color={getPaymentMethodColor(payment.paymentMethod) as any} 
-                          size="small"
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>{payment.feeType}</TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={payment.status} 
-                          color={payment.status === 'Success' ? 'success' : 'error'} 
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <IconButton color="primary" size="small">
-                          <PrintIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </TabPanel>
+        
+        {/* Payments Tab */}
+        <TabPanel value={tabValue} index={1}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="h6">Fee Payments</Typography>
+            {!readOnly && (
+              <Button 
+                variant="contained" 
+                startIcon={<Payment />}
+                onClick={handleOpenPaymentDialog}
+              >
+                Record Payment
+              </Button>
+            )}
+          </Box>
+          
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={12} md={4}>
+              <TextField
+                label="Search by Student Name/ID"
+                fullWidth
+                variant="outlined"
+                size="small"
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Class</InputLabel>
+                <Select label="Class" value="">
+                  <MenuItem value="">All Classes</MenuItem>
+                  {classes.map((cls) => (
+                    <MenuItem key={cls} value={cls}>{cls}</MenuItem>
                   ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        )}
-
-        {/* Add/Edit Fee Structure Dialog */}
-        <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-          <DialogTitle>
-            {editingFee ? 'फीस संरचना संपादित करें' : 'फीस संरचना जोड़ें'}
-          </DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="कक्षा"
-                  value={formData.class || ''}
-                  onChange={(e) => setFormData({...formData, class: e.target.value})}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Payment Status</InputLabel>
+                <Select label="Payment Status" value="">
+                  <MenuItem value="">All Statuses</MenuItem>
+                  <MenuItem value="Paid">Paid</MenuItem>
+                  <MenuItem value="Pending">Pending</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={2}>
+              <Button variant="outlined" fullWidth>
+                Filter
+              </Button>
+            </Grid>
+          </Grid>
+          
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: 'primary.light' }}>
+                  <TableCell>Student ID</TableCell>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Class</TableCell>
+                  <TableCell>Fee Category</TableCell>
+                  <TableCell align="right">Amount (₹)</TableCell>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="center">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {payments.map((payment) => (
+                  <TableRow key={payment.id}>
+                    <TableCell>{payment.studentId}</TableCell>
+                    <TableCell>{payment.studentName}</TableCell>
+                    <TableCell>{payment.class}</TableCell>
+                    <TableCell>{payment.category}</TableCell>
+                    <TableCell align="right">₹{payment.amount.toLocaleString()}</TableCell>
+                    <TableCell>{payment.paymentDate || 'Not Paid'}</TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={payment.status} 
+                        color={payment.status === 'Paid' ? 'success' : 'warning'} 
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      {payment.status === 'Paid' ? (
+                        <IconButton color="primary" onClick={() => handleViewReceipt(payment)}>
+                          <ReceiptLong />
+                        </IconButton>
+                      ) : (
+                        <Button 
+                          size="small" 
+                          variant="outlined" 
+                          color="primary"
+                          disabled={readOnly}
+                        >
+                          Record Payment
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </TabPanel>
+        
+        {/* Fee Reports Tab */}
+        <TabPanel value={tabValue} index={2}>
+          <Typography variant="h6" gutterBottom>
+            Fee Collection Reports
+          </Typography>
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Class-wise Fee Collection
+                  </Typography>
+                  <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Typography color="text.secondary">
+                      Chart will be displayed here
+                    </Typography>
+                  </Box>
+                </CardContent>
+                <Divider />
+                <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button startIcon={<Print />} variant="outlined">
+                    Print Report
+                  </Button>
+                </Box>
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Monthly Fee Collection
+                  </Typography>
+                  <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Typography color="text.secondary">
+                      Chart will be displayed here
+                    </Typography>
+                  </Box>
+                </CardContent>
+                <Divider />
+                <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button startIcon={<Print />} variant="outlined">
+                    Print Report
+                  </Button>
+                </Box>
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Fee Collection Summary
+                  </Typography>
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Fee Category</TableCell>
+                          <TableCell align="right">Total Expected (₹)</TableCell>
+                          <TableCell align="right">Collected (₹)</TableCell>
+                          <TableCell align="right">Pending (₹)</TableCell>
+                          <TableCell align="right">Collection Rate</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell>Tuition Fee</TableCell>
+                          <TableCell align="right">₹36,000</TableCell>
+                          <TableCell align="right">₹22,000</TableCell>
+                          <TableCell align="right">₹14,000</TableCell>
+                          <TableCell align="right">61%</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Development Fee</TableCell>
+                          <TableCell align="right">₹18,000</TableCell>
+                          <TableCell align="right">₹11,000</TableCell>
+                          <TableCell align="right">₹7,000</TableCell>
+                          <TableCell align="right">61%</TableCell>
+                        </TableRow>
+                        <TableRow sx={{ fontWeight: 'bold' }}>
+                          <TableCell><strong>Total</strong></TableCell>
+                          <TableCell align="right"><strong>₹54,000</strong></TableCell>
+                          <TableCell align="right"><strong>₹33,000</strong></TableCell>
+                          <TableCell align="right"><strong>₹21,000</strong></TableCell>
+                          <TableCell align="right"><strong>61%</strong></TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </CardContent>
+                <Divider />
+                <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button startIcon={<ViewList />} variant="outlined" sx={{ mr: 1 }}>
+                    Detailed Report
+                  </Button>
+                  <Button startIcon={<Print />} variant="outlined">
+                    Print Summary
+                  </Button>
+                </Box>
+              </Card>
+            </Grid>
+          </Grid>
+        </TabPanel>
+        
+        {/* Fee Statistics Tab */}
+        <TabPanel value={tabValue} index={3}>
+          <Typography variant="h6" gutterBottom>
+            Fee Statistics and Analytics
+          </Typography>
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
+              <Card>
+                <CardContent>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Total Fee Collected (Current Year)
+                  </Typography>
+                  <Typography variant="h4" color="primary">
+                    ₹33,000
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12} md={4}>
+              <Card>
+                <CardContent>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Pending Fee Amount
+                  </Typography>
+                  <Typography variant="h4" color="error">
+                    ₹21,000
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12} md={4}>
+              <Card>
+                <CardContent>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Collection Rate
+                  </Typography>
+                  <Typography variant="h4" color={61 > 70 ? 'success' : 'warning'}>
+                    61%
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Alert severity="info">
+                Detailed fee statistics and analytics will be added in the next update.
+              </Alert>
+            </Grid>
+          </Grid>
+        </TabPanel>
+      </Paper>
+      
+      {/* Add New Fee Dialog */}
+      <Dialog open={isNewFeeDialogOpen} onClose={handleCloseNewFeeDialog}>
+        <DialogTitle>Add New Fee Structure</DialogTitle>
+        <DialogContent>
+          <Box component="form" sx={{ mt: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
                 <FormControl fullWidth>
-                  <InputLabel>फीस प्रकार</InputLabel>
+                  <InputLabel>Class</InputLabel>
                   <Select
-                    value={formData.feeType || 'Tuition'}
-                    onChange={(e) => setFormData({...formData, feeType: e.target.value as any})}
-                    label="फीस प्रकार"
+                    name="class"
+                    value={newFee.class}
+                    label="Class"
+                    onChange={handleNewFeeSelectChange}
                   >
-                    <MenuItem value="Tuition">शिक्षण शुल्क</MenuItem>
-                    <MenuItem value="Transport">परिवहन शुल्क</MenuItem>
-                    <MenuItem value="Library">पुस्तकालय शुल्क</MenuItem>
-                    <MenuItem value="Sports">खेल शुल्क</MenuItem>
-                    <MenuItem value="Annual">वार्षिक शुल्क</MenuItem>
+                    {classes.map((cls) => (
+                      <MenuItem key={cls} value={cls}>{cls}</MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="राशि (₹)"
-                  type="number"
-                  value={formData.amount || ''}
-                  onChange={(e) => setFormData({...formData, amount: parseInt(e.target.value) || 0})}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="नियत तारीख"
-                  type="date"
-                  value={formData.dueDate || ''}
-                  onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
+              
               <Grid item xs={12}>
                 <FormControl fullWidth>
-                  <InputLabel>स्थिति</InputLabel>
+                  <InputLabel>Fee Category</InputLabel>
                   <Select
-                    value={formData.status || 'Active'}
-                    onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                    label="स्थिति"
+                    name="category"
+                    value={newFee.category}
+                    label="Fee Category"
+                    onChange={handleNewFeeSelectChange}
                   >
-                    <MenuItem value="Active">सक्रिय</MenuItem>
-                    <MenuItem value="Inactive">निष्क्रिय</MenuItem>
+                    {feeCategories.map((category) => (
+                      <MenuItem key={category} value={category}>{category}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <TextField
+                  name="amount"
+                  label="Amount"
+                  type="number"
+                  fullWidth
+                  value={newFee.amount}
+                  onChange={handleNewFeeTextChange}
+                  InputProps={{
+                    startAdornment: <CurrencyRupee fontSize="small" />
+                  }}
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>Frequency</InputLabel>
+                  <Select
+                    name="frequency"
+                    value={newFee.frequency}
+                    label="Frequency"
+                    onChange={handleNewFeeSelectChange}
+                  >
+                    {frequencies.map((freq) => (
+                      <MenuItem key={freq} value={freq}>{freq}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <TextField
+                  name="dueDay"
+                  label="Due Day of Month"
+                  type="number"
+                  fullWidth
+                  value={newFee.dueDay}
+                  onChange={handleNewFeeTextChange}
+                  inputProps={{ min: 1, max: 31 }}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseNewFeeDialog}>Cancel</Button>
+          <Button 
+            onClick={handleAddNewFee}
+            disabled={!newFee.class || !newFee.category || newFee.amount <= 0}
+            variant="contained"
+          >
+            Add Fee
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Record Payment Dialog */}
+      <Dialog open={isDialogOpen} onClose={handleClosePaymentDialog}>
+        <DialogTitle>Record New Payment</DialogTitle>
+        <DialogContent>
+          <Box component="form" sx={{ mt: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="studentId"
+                  label="Student ID"
+                  fullWidth
+                  value={newPayment.studentId}
+                  onChange={handlePaymentTextChange}
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="studentName"
+                  label="Student Name"
+                  fullWidth
+                  value={newPayment.studentName}
+                  onChange={handlePaymentTextChange}
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Class</InputLabel>
+                  <Select
+                    name="class"
+                    value={newPayment.class}
+                    label="Class"
+                    onChange={handlePaymentSelectChange}
+                  >
+                    {classes.map((cls) => (
+                      <MenuItem key={cls} value={cls}>{cls}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Fee Category</InputLabel>
+                  <Select
+                    name="category"
+                    value={newPayment.category}
+                    label="Fee Category"
+                    onChange={handlePaymentSelectChange}
+                  >
+                    {feeCategories.map((category) => (
+                      <MenuItem key={category} value={category}>{category}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="amount"
+                  label="Amount"
+                  type="number"
+                  fullWidth
+                  value={newPayment.amount}
+                  onChange={handlePaymentTextChange}
+                  InputProps={{
+                    startAdornment: <CurrencyRupee fontSize="small" />
+                  }}
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="paymentDate"
+                  label="Payment Date"
+                  type="date"
+                  fullWidth
+                  value={newPayment.paymentDate}
+                  onChange={handlePaymentTextChange}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>Payment Mode</InputLabel>
+                  <Select
+                    name="paymentMode"
+                    value={newPayment.paymentMode}
+                    label="Payment Mode"
+                    onChange={handlePaymentSelectChange}
+                  >
+                    {paymentModes.map((mode) => (
+                      <MenuItem key={mode} value={mode}>{mode}</MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
             </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleClose}>रद्द करें</Button>
-            <Button onClick={handleSubmit} variant="contained">
-              {editingFee ? 'अपडेट करें' : 'जोड़ें'}
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Payment Dialog */}
-        <Dialog open={paymentOpen} onClose={() => setPaymentOpen(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>
-            भुगतान दर्ज करें - {selectedStudentForPayment?.studentName}
-          </DialogTitle>
-          <DialogContent>
-            {selectedStudentForPayment && (
-              <Box sx={{ mt: 2 }}>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  बकाया राशि: ₹{selectedStudentForPayment.pendingAmount.toLocaleString()}
-                </Alert>
-                <Grid container spacing={2}>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="भुगतान राशि (₹)"
-                      type="number"
-                      value={paymentData.amount}
-                      onChange={(e) => setPaymentData({...paymentData, amount: parseInt(e.target.value) || 0})}
-                      inputProps={{ max: selectedStudentForPayment.pendingAmount }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>भुगतान विधि</InputLabel>
-                      <Select
-                        value={paymentData.paymentMethod}
-                        onChange={(e) => setPaymentData({...paymentData, paymentMethod: e.target.value as any})}
-                        label="भुगतान विधि"
-                      >
-                        <MenuItem value="Cash">नकद</MenuItem>
-                        <MenuItem value="Bank Transfer">बैंक ट्रांसफर</MenuItem>
-                        <MenuItem value="Online">ऑनलाइन</MenuItem>
-                        <MenuItem value="Cheque">चेक</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="रसीद संख्या"
-                      value={paymentData.receiptNumber}
-                      onChange={(e) => setPaymentData({...paymentData, receiptNumber: e.target.value})}
-                    />
-                  </Grid>
-                </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePaymentDialog}>Cancel</Button>
+          <Button 
+            onClick={handleAddPayment}
+            disabled={!newPayment.studentId || !newPayment.studentName || !newPayment.class || !newPayment.category || newPayment.amount <= 0 || !newPayment.paymentDate || !newPayment.paymentMode}
+            variant="contained"
+          >
+            Record Payment
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Receipt Dialog */}
+      <Dialog open={isReceiptDialogOpen} onClose={handleCloseReceiptDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Fee Receipt</Typography>
+            <IconButton onClick={handlePrintReceipt}>
+              <Print />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {selectedReceipt && (
+            <Box sx={{ border: '1px dashed grey', p: 2 }}>
+              <Box sx={{ textAlign: 'center', mb: 2 }}>
+                <Typography variant="h5">SCHOOL ERP SYSTEM</Typography>
+                <Typography variant="body2">123 Education Street, Knowledge City</Typography>
+                <Typography variant="body2">Tel: 123-456-7890</Typography>
+                <Typography variant="h6" sx={{ mt: 2, textDecoration: 'underline' }}>FEE RECEIPT</Typography>
               </Box>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setPaymentOpen(false)}>रद्द करें</Button>
-            <Button onClick={handlePaymentSubmit} variant="contained">
-              भुगतान दर्ज करें
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
+              
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Typography variant="body2"><strong>Receipt No:</strong> {selectedReceipt.receiptNo}</Typography>
+                </Grid>
+                <Grid item xs={6} sx={{ textAlign: 'right' }}>
+                  <Typography variant="body2"><strong>Date:</strong> {selectedReceipt.paymentDate}</Typography>
+                </Grid>
+              </Grid>
+              
+              <Box sx={{ my: 2 }}>
+                <Typography><strong>Student ID:</strong> {selectedReceipt.studentId}</Typography>
+                <Typography><strong>Name:</strong> {selectedReceipt.studentName}</Typography>
+                <Typography><strong>Class:</strong> {selectedReceipt.class}</Typography>
+              </Box>
+              
+              <TableContainer component={Paper} sx={{ mb: 2 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Fee Description</TableCell>
+                      <TableCell align="right">Amount</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>{selectedReceipt.category}</TableCell>
+                      <TableCell align="right">₹{selectedReceipt.amount.toLocaleString()}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell><strong>Total</strong></TableCell>
+                      <TableCell align="right"><strong>₹{selectedReceipt.amount.toLocaleString()}</strong></TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              
+              <Box sx={{ mb: 2 }}>
+                <Typography><strong>Payment Mode:</strong> {selectedReceipt.paymentMode}</Typography>
+                <Typography><strong>Amount in words:</strong> {convertToWords(selectedReceipt.amount)} Rupees Only</Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+                <Box>
+                  <Typography variant="body2">Receiver's Signature</Typography>
+                </Box>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="body2">Authorized Signature</Typography>
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseReceiptDialog}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
+
+// Helper function to get the suffix for day numbers (1st, 2nd, 3rd, etc.)
+function getDaySuffix(day: number): string {
+  if (day >= 11 && day <= 13) {
+    return 'th';
+  }
+  switch (day % 10) {
+    case 1:
+      return 'st';
+    case 2:
+      return 'nd';
+    case 3:
+      return 'rd';
+    default:
+      return 'th';
+  }
+}
+
+// Helper function to convert number to words (simple implementation)
+function convertToWords(amount: number): string {
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  
+  if (amount === 0) return 'Zero';
+  
+  function convertLessThanThousand(n: number): string {
+    if (n === 0) return '';
+    else if (n < 20) return ones[n] + ' ';
+    else if (n < 100) return tens[Math.floor(n / 10)] + ' ' + convertLessThanThousand(n % 10);
+    else return ones[Math.floor(n / 100)] + ' Hundred ' + convertLessThanThousand(n % 100);
+  }
+  
+  let result = '';
+  if (amount >= 100000) {
+    result += convertLessThanThousand(Math.floor(amount / 100000)) + 'Lakh ';
+    amount %= 100000;
+  }
+  
+  if (amount >= 1000) {
+    result += convertLessThanThousand(Math.floor(amount / 1000)) + 'Thousand ';
+    amount %= 1000;
+  }
+  
+  result += convertLessThanThousand(amount);
+  return result.trim();
+}
 
 export default FeesManagement;

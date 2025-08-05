@@ -1,260 +1,295 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
+  Typography,
   TextField,
   Button,
-  Typography,
+  Paper,
   Container,
-  Alert,
+  Grid,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Paper,
-  Tabs,
-  Tab,
-  Grid
+  FormHelperText,
+  InputAdornment,
+  IconButton,
+  Link as MuiLink,
+  Alert
 } from '@mui/material';
-import { School, Login as LoginIcon, PersonAdd } from '@mui/icons-material';
-import { useAuth } from '../context/AuthContext';
+import {
+  School,
+  Visibility,
+  VisibilityOff,
+  LockOutlined,
+  EmailOutlined
+} from '@mui/icons-material';
+import { Link, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 
 const Login: React.FC = () => {
-  const { login, register } = useAuth();
-  const [tabValue, setTabValue] = useState(0);
+  const navigate = useNavigate();
+  const { login } = useContext(AuthContext);
   
-  // Login form state
-  const [loginUsername, setLoginUsername] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    role: 'teacher',
+  });
   
-  // Registration form state
-  const [regUsername, setRegUsername] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [regUserType, setRegUserType] = useState<'teacher' | 'student'>('teacher');
+  const [errors, setErrors] = useState({
+    email: '',
+    password: '',
+  });
   
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-    setError('');
-    setSuccess('');
-  };
-
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
     
-    if (!loginUsername || !loginPassword) {
-      setError('Please enter both username and password');
-      return;
-    }
-
-    const success = await login(loginUsername, loginPassword);
-    if (!success) {
-      setError('Invalid username or password, or account not approved');
+    // Clear error when user types
+    if (errors[name as keyof typeof errors]) {
+      setErrors({
+        ...errors,
+        [name]: '',
+      });
     }
   };
-
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
+  
+  const handleRoleChange = (e: any) => {
+    setFormData({
+      ...formData,
+      role: e.target.value,
+    });
+  };
+  
+  const handleClickShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
+  
+  const validateForm = () => {
+    let valid = true;
+    const newErrors = { ...errors };
     
-    if (!regUsername || !regEmail || !regPassword) {
-      setError('Please fill all fields');
-      return;
-    }
-
-    if (regPassword.length < 6) {
-      setError('Password must be at least 6 characters long');
-      return;
-    }
-
-    const success = await register(regUsername, regEmail, regPassword, regUserType);
-    if (success) {
-      setSuccess('Registration request submitted! Admin will approve your account soon.');
-      setRegUsername('');
-      setRegEmail('');
-      setRegPassword('');
+    // Email validation
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+      valid = false;
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+      valid = false;
     } else {
-      setError('Username already exists or registration failed');
+      newErrors.email = '';
+    }
+    
+    // Password validation
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+      valid = false;
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+      valid = false;
+    } else {
+      newErrors.password = '';
+    }
+    
+    setErrors(newErrors);
+    return valid;
+  };
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (validateForm()) {
+      // Admin login for demonstration purposes
+      if (formData.role === 'admin' && formData.email === 'admin@example.com' && formData.password === 'admin123') {
+        const loginSuccess = login({
+          id: '1',
+          name: 'System Administrator',
+          email: formData.email,
+          role: 'admin',
+          approved: true
+        });
+        
+        if (loginSuccess) {
+          navigate('/admin');
+        }
+        return;
+      }
+      
+      // Check approved users from localStorage
+      const approvedUsers = JSON.parse(localStorage.getItem('approvedUsers') || '[]');
+      const approvedUser = approvedUsers.find((user: any) => 
+        user.email === formData.email && 
+        user.role === formData.role
+      );
+      
+      if (approvedUser) {
+        // In a real implementation, we would verify the password hash here
+        const loginSuccess = login(approvedUser);
+        if (loginSuccess) {
+          navigate('/');
+        }
+        return;
+      }
+      
+      // Check if user is pending approval
+      const pendingUsers = JSON.parse(localStorage.getItem('pendingUsers') || '[]');
+      const isPending = pendingUsers.some((user: any) => 
+        user.email === formData.email && 
+        user.role === formData.role
+      );
+      
+      if (isPending) {
+        setLoginError('Your account is pending admin approval. Please try again later.');
+      } else {
+        // If we get here, login failed
+        setLoginError('Invalid email, password, or role combination');
+      }
     }
   };
-
+  
   return (
-    <Container component="main" maxWidth="sm">
+    <Container component="main" maxWidth="xs">
       <Box
         sx={{
-          minHeight: '100vh',
+          marginTop: 8,
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center',
           alignItems: 'center',
-          py: 4
         }}
       >
-        <Paper elevation={3} sx={{ p: 4, width: '100%', maxWidth: 500 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>        
-            <School sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
-            <Typography component="h1" variant="h4" gutterBottom>
-              School ERP
+        <Paper elevation={3} sx={{ p: 4, width: '100%', mt: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+            <School color="primary" sx={{ fontSize: 40 }} />
+          </Box>
+          
+          <Typography component="h1" variant="h5" align="center" gutterBottom>
+            School ERP System
+          </Typography>
+          
+          <Typography component="h2" variant="h6" align="center" color="text.secondary" sx={{ mb: 3 }}>
+            Sign In
+          </Typography>
+          
+          {loginError && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {loginError}
+            </Alert>
+          )}
+          
+          <Box component="form" onSubmit={handleSubmit} noValidate>
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="email"
+              label="Email Address"
+              name="email"
+              autoComplete="email"
+              autoFocus
+              value={formData.email}
+              onChange={handleInputChange}
+              error={!!errors.email}
+              helperText={errors.email}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <EmailOutlined />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="password"
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              id="password"
+              autoComplete="current-password"
+              value={formData.password}
+              onChange={handleInputChange}
+              error={!!errors.password}
+              helperText={errors.password}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <LockOutlined />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={handleClickShowPassword}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+            
+            <FormControl fullWidth margin="normal">
+              <InputLabel id="role-select-label">Login As</InputLabel>
+              <Select
+                labelId="role-select-label"
+                id="role-select"
+                value={formData.role}
+                label="Login As"
+                onChange={handleRoleChange}
+              >
+                <MenuItem value="admin">Administrator</MenuItem>
+                <MenuItem value="teacher">Teacher</MenuItem>
+                <MenuItem value="student">Student</MenuItem>
+                <MenuItem value="parent">Parent</MenuItem>
+              </Select>
+              <FormHelperText>
+                Select your role in the school
+              </FormHelperText>
+            </FormControl>
+            
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{ mt: 3, mb: 2 }}
+            >
+              Sign In
+            </Button>
+            
+            <Grid container>
+              <Grid item xs>
+                <MuiLink component={Link} to="/forgot-password" variant="body2">
+                  Forgot password?
+                </MuiLink>
+              </Grid>
+              <Grid item>
+                <MuiLink component={Link} to="/register" variant="body2">
+                  {"Don't have an account? Sign Up"}
+                </MuiLink>
+              </Grid>
+            </Grid>
+          </Box>
+          
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 2 }}>
+              Please contact your administrator if you need assistance.
             </Typography>
-            <Typography variant="h6" color="text.secondary">
-              Welcome to School Management System
+            
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', fontSize: 12 }}>
+              Admin Access: admin@example.com / admin123
             </Typography>
           </Box>
-
-          <Tabs value={tabValue} onChange={handleTabChange} centered sx={{ mb: 3 }}>
-            <Tab label="Login" />
-            <Tab label="Register" />
-          </Tabs>
-
-          {/* Login Tab */}
-          {tabValue === 0 && (
-            <Box component="form" onSubmit={handleLoginSubmit}>
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="loginUsername"
-                label="Username"
-                name="username"
-                autoComplete="username"
-                autoFocus
-                value={loginUsername}
-                onChange={(e) => setLoginUsername(e.target.value)}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="Password"
-                type="password"
-                id="loginPassword"
-                autoComplete="current-password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-              />
-              
-              {error && (
-                <Alert severity="error" sx={{ mt: 2 }}>
-                  {error}
-                </Alert>
-              )}
-              
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                startIcon={<LoginIcon />}
-                sx={{ mt: 3, mb: 2, py: 1.5 }}
-              >
-                Sign In
-              </Button>
-
-              <Box sx={{ mt: 3, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
-                <Typography variant="body2" color="white" gutterBottom>
-                  <strong>Admin Credentials:</strong>
-                </Typography>
-                <Typography variant="caption" display="block" color="white">
-                  Username: admin
-                </Typography>
-                <Typography variant="caption" display="block" color="white">
-                  Password: admin123
-                </Typography>
-              </Box>
-            </Box>
-          )}
-
-          {/* Registration Tab */}
-          {tabValue === 1 && (
-            <Box component="form" onSubmit={handleRegisterSubmit}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <TextField
-                    required
-                    fullWidth
-                    id="regUsername"
-                    label="Username"
-                    name="username"
-                    value={regUsername}
-                    onChange={(e) => setRegUsername(e.target.value)}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    required
-                    fullWidth
-                    id="regEmail"
-                    label="Email Address"
-                    name="email"
-                    type="email"
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    required
-                    fullWidth
-                    name="password"
-                    label="Password"
-                    type="password"
-                    id="regPassword"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    helperText="Minimum 6 characters"
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <FormControl fullWidth>
-                    <InputLabel>Account Type</InputLabel>
-                    <Select
-                      value={regUserType}
-                      label="Account Type"
-                      onChange={(e) => setRegUserType(e.target.value as 'teacher' | 'student')}
-                    >
-                      <MenuItem value="teacher">Teacher</MenuItem>
-                      <MenuItem value="student">Student</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-              </Grid>
-
-              {error && (
-                <Alert severity="error" sx={{ mt: 2 }}>
-                  {error}
-                </Alert>
-              )}
-
-              {success && (
-                <Alert severity="success" sx={{ mt: 2 }}>
-                  {success}
-                </Alert>
-              )}
-
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                startIcon={<PersonAdd />}
-                sx={{ mt: 3, mb: 2, py: 1.5 }}
-              >
-                Submit Registration Request
-              </Button>
-
-              <Box sx={{ mt: 2, p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
-                <Typography variant="body2" color="text.primary" gutterBottom>
-                  <strong>Note:</strong> Registration requests require admin approval. 
-                  You will receive login access once approved.
-                </Typography>
-              </Box>
-            </Box>
-          )}
         </Paper>
       </Box>
     </Container>

@@ -1,433 +1,440 @@
 import React, { useState } from 'react';
 import {
-  Container,
-  Typography,
   Box,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Typography,
   TextField,
+  Grid,
+  Button,
+  Paper,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
+  Divider,
+  Container,
+  SelectChangeEvent,
   Chip,
-  IconButton,
-  Grid,
-  Avatar
+  FormControlLabel,
+  Switch,
+  InputAdornment
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Person as PersonIcon,
-  Email as EmailIcon,
-  Phone as PhoneIcon
-} from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { Save, Clear, Phone, Email, Home, School } from '@mui/icons-material';
 
-interface Teacher {
-  id: number;
+// Define interfaces for form data
+interface TeacherFormData {
+  teacherName: string;
   employeeId: string;
-  name: string;
-  email: string;
-  phone: string;
-  subject: string;
+  department: string;
+  designation: string;
+  dateOfJoining: Date | null;
   qualification: string;
-  experience: string;
-  salary: string;
-  joiningDate: string;
-  status: 'Active' | 'Inactive';
+  email: string;
+  phoneNumber: string;
+  address: string;
+  subjects: string[];
+  classTeacherFor: string;
+  isActive: boolean;
 }
 
-const Teachers: React.FC = () => {
-  // localStorage से data load करें या default data use करें
-  const getInitialTeachers = (): Teacher[] => {
-    const savedTeachers = localStorage.getItem('school-erp-teachers');
-    if (savedTeachers) {
-      return JSON.parse(savedTeachers);
-    }
-    return [
-      {
-        id: 1,
-        employeeId: 'EMP001',
-        name: 'डॉ. अनिता शर्मा',
-        email: 'anita@school.com',
-        phone: '9876543210',
-        subject: 'गणित',
-        qualification: 'M.Sc Mathematics',
-        experience: '10 years',
-        salary: '₹50,000',
-        joiningDate: '2020-01-15',
-        status: 'Active'
-      },
-      {
-        id: 2,
-        employeeId: 'EMP002',
-        name: 'राजेश कुमार',
-        email: 'rajesh@school.com',
-        phone: '9876543211',
-        subject: 'भौतिक विज्ञान',
-        qualification: 'M.Sc Physics',
-        experience: '8 years',
-        salary: '₹45,000',
-        joiningDate: '2021-03-20',
-        status: 'Active'
-      },
-      {
-        id: 3,
-        employeeId: 'EMP003',
-        name: 'सुनीता वर्मा',
-        email: 'sunita@school.com',
-        phone: '9876543212',
-        subject: 'अंग्रेजी',
-        qualification: 'M.A English',
-        experience: '12 years',
-        salary: '₹48,000',
-        joiningDate: '2019-07-10',
-        status: 'Inactive'
-      }
-    ];
-  };
+interface TeachersProps {
+  readOnly?: boolean;
+}
 
-  const [teachers, setTeachers] = useState<Teacher[]>(getInitialTeachers);
-
-  // localStorage में teachers को save करने का function
-  const saveTeachersToStorage = (updatedTeachers: Teacher[]) => {
-    localStorage.setItem('school-erp-teachers', JSON.stringify(updatedTeachers));
-    setTeachers(updatedTeachers);
-  };
-
-  const [open, setOpen] = useState(false);
-  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
-  const [formData, setFormData] = useState<Partial<Teacher>>({
+const Teachers: React.FC<TeachersProps> = ({ readOnly = false }) => {
+  // Initial form state
+  const initialFormState: TeacherFormData = {
+    teacherName: '',
     employeeId: '',
-    name: '',
-    email: '',
-    phone: '',
-    subject: '',
+    department: '',
+    designation: '',
+    dateOfJoining: null,
     qualification: '',
-    experience: '',
-    salary: '',
-    joiningDate: '',
-    status: 'Active'
+    email: '',
+    phoneNumber: '',
+    address: '',
+    subjects: [],
+    classTeacherFor: '',
+    isActive: true
+  };
+
+  // State for form data
+  const [formData, setFormData] = useState<TeacherFormData>(initialFormState);
+
+  // Department options
+  const departments = ['English', 'Mathematics', 'Science', 'Social Studies', 'Computer Science', 'Arts', 'Physical Education'];
+  
+  // Designation options
+  const designations = ['Junior Teacher', 'Senior Teacher', 'Head of Department', 'Vice Principal', 'Principal'];
+
+  // Subject options
+  const subjectOptions = [
+    'English Language', 'English Literature', 'Mathematics', 'Physics', 'Chemistry', 
+    'Biology', 'History', 'Geography', 'Computer Science', 'Physical Education', 
+    'Arts', 'Music', 'Economics', 'Business Studies'
+  ];
+
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+
+  // Handle select changes
+  const handleSelectChange = (e: SelectChangeEvent) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+
+  // Handle subjects multi-select
+  const handleSubjectsChange = (e: SelectChangeEvent<string[]>) => {
+    const { value } = e.target;
+    setFormData({
+      ...formData,
+      subjects: typeof value === 'string' ? value.split(',') : value,
+    });
+  };
+
+  // Handle switch changes
+  const handleSwitchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: checked,
+    });
+  };
+
+  // Handle date change
+  const handleDateChange = (date: Date | null) => {
+    setFormData({
+      ...formData,
+      dateOfJoining: date,
+    });
+  };
+
+  // Handle form submission
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Form Data:', formData);
+    // Here you would typically send the data to an API
+    alert('Teacher information saved successfully!');
+  };
+
+  // Handle form reset
+  const handleReset = () => {
+    setFormData(initialFormState);
+  };
+
+  // Create common input props
+  const getInputProps = () => ({
+    InputProps: {
+      readOnly: readOnly,
+      sx: readOnly ? { bgcolor: 'action.hover' } : {}
+    },
+    disabled: readOnly
   });
 
-  const handleOpen = (teacher?: Teacher) => {
-    if (teacher) {
-      setEditingTeacher(teacher);
-      setFormData(teacher);
-    } else {
-      setEditingTeacher(null);
-      setFormData({
-        employeeId: '',
-        name: '',
-        email: '',
-        phone: '',
-        subject: '',
-        qualification: '',
-        experience: '',
-        salary: '',
-        joiningDate: '',
-        status: 'Active'
-      });
-    }
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-    setEditingTeacher(null);
-    setFormData({});
-  };
-
-  const handleSubmit = () => {
-    if (editingTeacher) {
-      const updatedTeachers = teachers.map(t => 
-        t.id === editingTeacher.id 
-          ? { ...editingTeacher, ...formData }
-          : t
-      );
-      saveTeachersToStorage(updatedTeachers);
-    } else {
-      const newTeacher: Teacher = {
-        id: Math.max(...teachers.map(t => t.id)) + 1,
-        employeeId: formData.employeeId || '',
-        name: formData.name || '',
-        email: formData.email || '',
-        phone: formData.phone || '',
-        subject: formData.subject || '',
-        qualification: formData.qualification || '',
-        experience: formData.experience || '',
-        salary: formData.salary || '',
-        joiningDate: formData.joiningDate || '',
-        status: formData.status as 'Active' | 'Inactive' || 'Active'
-      };
-      saveTeachersToStorage([...teachers, newTeacher]);
-    }
-    handleClose();
-  };
-
-  const handleDelete = (id: number) => {
-    const updatedTeachers = teachers.filter(t => t.id !== id);
-    saveTeachersToStorage(updatedTeachers);
-  };
-
-  const getStatusColor = (status: string) => {
-    return status === 'Active' ? 'success' : 'error';
-  };
-
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
-
   return (
-    <Container>
-      <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <PersonIcon sx={{ mr: 2, fontSize: 32 }} />
-            <Typography variant="h4">
-              Teachers Management
-            </Typography>
-          </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpen()}
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Paper elevation={3} sx={{ p: 4 }}>
+        <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+          Teacher Information Form
+        </Typography>
+
+        {readOnly && (
+          <Paper 
+            elevation={0} 
+            sx={{ 
+              bgcolor: 'info.light', 
+              color: 'info.contrastText', 
+              p: 2, 
+              mb: 3,
+              borderRadius: 1
+            }}
           >
-            Add New Teacher
-          </Button>
-        </Box>
+            <Typography>
+              You are in view-only mode. As a student or teacher, you can only view this information but cannot edit it.
+            </Typography>
+          </Paper>
+        )}
 
-        <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={4}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="h6" color="primary">
-                {teachers.filter(t => t.status === 'Active').length}
-              </Typography>
-              <Typography variant="body2">Active Teachers</Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="h6" color="warning.main">
-                {teachers.filter(t => t.status === 'Inactive').length}
-              </Typography>
-              <Typography variant="body2">Inactive Teachers</Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="h6" color="info.main">
-                {teachers.length}
-              </Typography>
-              <Typography variant="body2">Total Teachers</Typography>
-            </Paper>
-          </Grid>
-        </Grid>
-      </Box>
+        <Box component="form" onSubmit={handleSubmit}>
+          {/* Teacher Basic Information */}
+          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+            Basic Information
+          </Typography>
+          <Divider sx={{ mb: 3 }} />
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell><strong>Employee ID</strong></TableCell>
-              <TableCell><strong>Teacher</strong></TableCell>
-              <TableCell><strong>Subject</strong></TableCell>
-              <TableCell><strong>Qualification</strong></TableCell>
-              <TableCell><strong>Experience</strong></TableCell>
-              <TableCell><strong>Salary</strong></TableCell>
-              <TableCell><strong>Status</strong></TableCell>
-              <TableCell><strong>Actions</strong></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {teachers.map((teacher) => (
-              <TableRow key={teacher.id}>
-                <TableCell>{teacher.employeeId}</TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-                      {getInitials(teacher.name)}
-                    </Avatar>
-                    <Box>
-                      <Typography variant="body1">{teacher.name}</Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                        <EmailIcon sx={{ fontSize: 14, mr: 0.5, color: 'text.secondary' }} />
-                        <Typography variant="caption" color="text.secondary">
-                          {teacher.email}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <PhoneIcon sx={{ fontSize: 14, mr: 0.5, color: 'text.secondary' }} />
-                        <Typography variant="caption" color="text.secondary">
-                          {teacher.phone}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Chip label={teacher.subject} variant="outlined" color="info" />
-                </TableCell>
-                <TableCell>{teacher.qualification}</TableCell>
-                <TableCell>{teacher.experience}</TableCell>
-                <TableCell>
-                  <Typography variant="body2" color="success.main" fontWeight="bold">
-                    {teacher.salary}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Chip 
-                    label={teacher.status} 
-                    color={getStatusColor(teacher.status)} 
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <IconButton 
-                    color="primary" 
-                    onClick={() => handleOpen(teacher)}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton 
-                    color="error" 
-                    onClick={() => handleDelete(teacher.id)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Add/Edit Teacher Dialog */}
-      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {editingTeacher ? 'Edit Teacher' : 'Add New Teacher'}
-        </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} sm={6}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
+                required
+                label="Teacher Name"
+                name="teacherName"
+                value={formData.teacherName}
+                onChange={handleInputChange}
+                {...getInputProps()}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                required
                 label="Employee ID"
-                value={formData.employeeId || ''}
-                onChange={(e) => setFormData({...formData, employeeId: e.target.value})}
+                name="employeeId"
+                value={formData.employeeId}
+                onChange={handleInputChange}
+                {...getInputProps()}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Full Name"
-                value={formData.name || ''}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                value={formData.email || ''}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Phone"
-                value={formData.phone || ''}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Subject</InputLabel>
+            
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth disabled={readOnly}>
+                <InputLabel>Department</InputLabel>
                 <Select
-                  value={formData.subject || ''}
-                  label="Subject"
-                  onChange={(e) => setFormData({...formData, subject: e.target.value})}
+                  name="department"
+                  value={formData.department}
+                  label="Department"
+                  onChange={handleSelectChange}
+                  inputProps={{
+                    readOnly: readOnly
+                  }}
                 >
-                  <MenuItem value="गणित">गणित (Mathematics)</MenuItem>
-                  <MenuItem value="भौतिक विज्ञान">भौतिक विज्ञान (Physics)</MenuItem>
-                  <MenuItem value="रसायन विज्ञान">रसायन विज्ञान (Chemistry)</MenuItem>
-                  <MenuItem value="जीव विज्ञान">जीव विज्ञान (Biology)</MenuItem>
-                  <MenuItem value="अंग्रेजी">अंग्रेजी (English)</MenuItem>
-                  <MenuItem value="हिंदी">हिंदी (Hindi)</MenuItem>
-                  <MenuItem value="सामाजिक विज्ञान">सामाजिक विज्ञान (Social Science)</MenuItem>
-                  <MenuItem value="कंप्यूटर साइंस">कंप्यूटर साइंस</MenuItem>
+                  {departments.map((dept) => (
+                    <MenuItem key={dept} value={dept}>
+                      {dept}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth disabled={readOnly}>
+                <InputLabel>Designation</InputLabel>
+                <Select
+                  name="designation"
+                  value={formData.designation}
+                  label="Designation"
+                  onChange={handleSelectChange}
+                  inputProps={{
+                    readOnly: readOnly
+                  }}
+                >
+                  {designations.map((designation) => (
+                    <MenuItem key={designation} value={designation}>
+                      {designation}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  label="Date of Joining"
+                  value={formData.dateOfJoining}
+                  onChange={handleDateChange}
+                  slotProps={{ 
+                    textField: { 
+                      fullWidth: true,
+                      ...getInputProps()
+                    } 
+                  }}
+                />
+              </LocalizationProvider>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 label="Qualification"
-                value={formData.qualification || ''}
-                onChange={(e) => setFormData({...formData, qualification: e.target.value})}
+                name="qualification"
+                value={formData.qualification}
+                onChange={handleInputChange}
+                placeholder="e.g., M.Sc., B.Ed."
+                {...getInputProps()}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+          </Grid>
+
+          {/* Contact Information */}
+          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+            Contact Information
+          </Typography>
+          <Divider sx={{ mb: 3 }} />
+
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Experience"
-                value={formData.experience || ''}
-                onChange={(e) => setFormData({...formData, experience: e.target.value})}
+                required
+                label="Email Address"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                InputProps={{
+                  readOnly: readOnly,
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Email color="action" />
+                    </InputAdornment>
+                  ),
+                  sx: readOnly ? { bgcolor: 'action.hover' } : {}
+                }}
+                disabled={readOnly}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Salary"
-                value={formData.salary || ''}
-                onChange={(e) => setFormData({...formData, salary: e.target.value})}
+                required
+                label="Phone Number"
+                name="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={handleInputChange}
+                InputProps={{
+                  readOnly: readOnly,
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Phone color="action" />
+                    </InputAdornment>
+                  ),
+                  sx: readOnly ? { bgcolor: 'action.hover' } : {}
+                }}
+                disabled={readOnly}
               />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={formData.status || 'Active'}
-                  label="Status"
-                  onChange={(e) => setFormData({...formData, status: e.target.value as 'Active' | 'Inactive'})}
-                >
-                  <MenuItem value="Active">Active</MenuItem>
-                  <MenuItem value="Inactive">Inactive</MenuItem>
-                </Select>
-              </FormControl>
             </Grid>
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Joining Date"
-                type="date"
-                value={formData.joiningDate || ''}
-                onChange={(e) => setFormData({...formData, joiningDate: e.target.value})}
-                InputLabelProps={{ shrink: true }}
+                required
+                label="Residential Address"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                multiline
+                rows={3}
+                InputProps={{
+                  readOnly: readOnly,
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Home color="action" />
+                    </InputAdornment>
+                  ),
+                  sx: readOnly ? { bgcolor: 'action.hover' } : {}
+                }}
+                disabled={readOnly}
               />
             </Grid>
           </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained">
-            {editingTeacher ? 'Update' : 'Add'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+
+          {/* Teaching Information */}
+          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+            Teaching Information
+          </Typography>
+          <Divider sx={{ mb: 3 }} />
+
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <FormControl fullWidth disabled={readOnly}>
+                <InputLabel>Subjects Taught</InputLabel>
+                <Select
+                  multiple
+                  name="subjects"
+                  value={formData.subjects}
+                  label="Subjects Taught"
+                  onChange={handleSubjectsChange}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((value) => (
+                        <Chip key={value} label={value} />
+                      ))}
+                    </Box>
+                  )}
+                  inputProps={{
+                    readOnly: readOnly
+                  }}
+                >
+                  {subjectOptions.map((subject) => (
+                    <MenuItem key={subject} value={subject}>
+                      {subject}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Class Teacher For"
+                name="classTeacherFor"
+                value={formData.classTeacherFor}
+                onChange={handleInputChange}
+                placeholder="e.g., 10-A"
+                InputProps={{
+                  readOnly: readOnly,
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <School color="action" />
+                    </InputAdornment>
+                  ),
+                  sx: readOnly ? { bgcolor: 'action.hover' } : {}
+                }}
+                disabled={readOnly}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.isActive}
+                    onChange={handleSwitchChange}
+                    name="isActive"
+                    color="primary"
+                    disabled={readOnly}
+                  />
+                }
+                label="Active Status"
+              />
+            </Grid>
+          </Grid>
+
+          {/* Action Buttons */}
+          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+            {!readOnly && (
+              <>
+                <Button
+                  variant="outlined"
+                  startIcon={<Clear />}
+                  onClick={handleReset}
+                >
+                  Reset
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  startIcon={<Save />}
+                >
+                  Save
+                </Button>
+              </>
+            )}
+          </Box>
+        </Box>
+      </Paper>
     </Container>
   );
 };

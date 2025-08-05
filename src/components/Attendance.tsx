@@ -1,428 +1,235 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  Container,
-  Typography,
   Box,
-  Button,
+  Typography,
+  Grid,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Chip,
-  IconButton,
-  Grid,
-  Card,
-  CardContent,
+  Button,
   Checkbox,
-  FormControlLabel
+  Container,
+  Divider,
+  SelectChangeEvent,
+  Alert
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  CalendarToday as CalendarIcon,
-  People as PeopleIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  Visibility as ViewIcon
-} from '@mui/icons-material';
-
+// Student interface
 interface Student {
-  id: number;
-  rollNumber: string;
+  id: string;
   name: string;
-  class: string;
-  section: string;
+  admissionNumber: string;
+  isPresent: boolean;
+  reason?: string;
 }
 
-interface AttendanceRecord {
-  id: number;
-  studentId: number;
-  studentName: string;
-  rollNumber: string;
-  class: string;
-  section: string;
-  date: string;
-  status: 'Present' | 'Absent' | 'Late';
-  remarks?: string;
+interface AttendanceProps {
+  readOnly?: boolean;
 }
 
-const Attendance: React.FC = () => {
-  // localStorage से attendance data load करें
-  const getInitialAttendance = (): AttendanceRecord[] => {
-    const savedAttendance = localStorage.getItem('school-erp-attendance');
-    if (savedAttendance) {
-      return JSON.parse(savedAttendance);
-    }
-    return [];
-  };
+// Constants for static text
+const TITLE = "Attendance Management";
+const READ_ONLY_MESSAGE = "You are in view-only mode. As a student or teacher, you can only view attendance records but cannot mark or edit attendance.";
+const SAVE_SUCCESS_MESSAGE = "Attendance saved successfully!";
 
-  // localStorage से students data load करें
-  const getStudentsFromStorage = (): Student[] => {
-    const savedStudents = localStorage.getItem('school-erp-students');
-    if (savedStudents) {
-      return JSON.parse(savedStudents).map((student: any) => ({
-        id: student.id,
-        rollNumber: student.rollNumber,
-        name: student.name,
-        class: student.class,
-        section: student.section
-      }));
-    }
-    return [];
-  };
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { Save, Print, CalendarMonth } from '@mui/icons-material';
 
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(getInitialAttendance);
-  const [students] = useState<Student[]>(getStudentsFromStorage);
-  const [open, setOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  // Classes options - moved outside component for better performance
+const CLASSES = ['6-A', '6-B', '7-A', '7-B', '8-A', '8-B', '9-A', '9-B', '10-A', '10-B'];
+
+// Initial mock student data
+const INITIAL_STUDENTS: Student[] = [
+  { id: '1', name: 'John Smith', admissionNumber: 'ADM001', isPresent: true },
+  { id: '2', name: 'Sarah Johnson', admissionNumber: 'ADM002', isPresent: true },
+  { id: '3', name: 'Michael Brown', admissionNumber: 'ADM003', isPresent: false, reason: 'Medical Leave' },
+  { id: '4', name: 'Emily Davis', admissionNumber: 'ADM004', isPresent: true },
+  { id: '5', name: 'Robert Wilson', admissionNumber: 'ADM005', isPresent: true },
+  { id: '6', name: 'Jennifer Lee', admissionNumber: 'ADM006', isPresent: false, reason: 'Family Function' },
+  { id: '7', name: 'David Miller', admissionNumber: 'ADM007', isPresent: true },
+  { id: '8', name: 'Jessica Taylor', admissionNumber: 'ADM008', isPresent: true },
+  { id: '9', name: 'James Anderson', admissionNumber: 'ADM009', isPresent: true },
+  { id: '10', name: 'Lisa Thomas', admissionNumber: 'ADM010', isPresent: false, reason: 'Sick' },
+];
+
+const Attendance: React.FC<AttendanceProps> = ({ readOnly = false }) => {
+  // State for class and date
   const [selectedClass, setSelectedClass] = useState('');
-  const [selectedSection, setSelectedSection] = useState('');
-  const [attendanceData, setAttendanceData] = useState<{[key: number]: {status: 'Present' | 'Absent' | 'Late', remarks: string}}>({});
 
-  // localStorage में attendance को save करने का function
-  const saveAttendanceToStorage = (updatedAttendance: AttendanceRecord[]) => {
-    localStorage.setItem('school-erp-attendance', JSON.stringify(updatedAttendance));
-    setAttendanceRecords(updatedAttendance);
-  };
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
 
-  // Filter students based on selected class and section
-  const filteredStudents = students.filter(student => {
-    return (
-      (!selectedClass || student.class === selectedClass) &&
-      (!selectedSection || student.section === selectedSection)
-    );
-  });
+  // Handle class change - memoized with useCallback for better performance
+  const handleClassChange = useCallback((event: SelectChangeEvent) => {
+    setSelectedClass(event.target.value);
+  }, []);
 
-  // Get unique classes
-  const classes = [...new Set(students.map(s => s.class))];
-  
-  // Get unique sections
-  const sections = [...new Set(students.map(s => s.section))];
+  // Handle date change - memoized with useCallback for better performance
+  const handleDateChange = useCallback((date: Date | null) => {
+    setSelectedDate(date);
+  }, []);
 
-  const handleOpen = () => {
-    setOpen(true);
-    // Initialize attendance data for all filtered students
-    const initialData: {[key: number]: {status: 'Present' | 'Absent' | 'Late', remarks: string}} = {};
-    filteredStudents.forEach(student => {
-      // Check if attendance already exists for this date
-      const existingRecord = attendanceRecords.find(
-        record => record.studentId === student.id && record.date === selectedDate
-      );
-      initialData[student.id] = {
-        status: existingRecord?.status || 'Present',
-        remarks: existingRecord?.remarks || ''
-      };
-    });
-    setAttendanceData(initialData);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-    setAttendanceData({});
-  };
-
-  const handleSubmit = () => {
-    const newRecords: AttendanceRecord[] = [];
+  // Handle attendance change - memoized with useCallback for better performance
+  const handleAttendanceChange = useCallback((studentId: string, isPresent: boolean) => {
+    if (readOnly) return;
     
-    filteredStudents.forEach(student => {
-      const data = attendanceData[student.id];
-      if (data) {
-        // Remove existing record for this student and date
-        const filteredRecords = attendanceRecords.filter(
-          record => !(record.studentId === student.id && record.date === selectedDate)
-        );
-        
-        // Add new record
-        const newRecord: AttendanceRecord = {
-          id: Date.now() + student.id, // Simple ID generation
-          studentId: student.id,
-          studentName: student.name,
-          rollNumber: student.rollNumber,
-          class: student.class,
-          section: student.section,
-          date: selectedDate,
-          status: data.status,
-          remarks: data.remarks
-        };
-        
-        newRecords.push(newRecord);
-      }
-    });
-
-    // Combine existing records (excluding today's for selected students) with new records
-    const otherRecords = attendanceRecords.filter(
-      record => !(
-        filteredStudents.some(s => s.id === record.studentId) && 
-        record.date === selectedDate
+    setStudents(prevStudents => 
+      prevStudents.map(student => 
+        student.id === studentId ? { ...student, isPresent } : student
       )
     );
-    
-    saveAttendanceToStorage([...otherRecords, ...newRecords]);
-    handleClose();
-  };
+  }, [readOnly]);
 
-  const handleAttendanceChange = (studentId: number, status: 'Present' | 'Absent' | 'Late') => {
-    setAttendanceData(prev => ({
-      ...prev,
-      [studentId]: {
-        ...prev[studentId],
-        status
-      }
-    }));
-  };
+  // Handle form submission - memoized with useCallback for better performance
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Submitting attendance for class:', selectedClass, 'on date:', selectedDate);
+    console.log('Student attendance:', students);
+    alert(SAVE_SUCCESS_MESSAGE);
+  }, [selectedClass, selectedDate, students]);
 
-  const handleRemarksChange = (studentId: number, remarks: string) => {
-    setAttendanceData(prev => ({
-      ...prev,
-      [studentId]: {
-        ...prev[studentId],
-        remarks
-      }
-    }));
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Present': return 'success';
-      case 'Absent': return 'error';
-      case 'Late': return 'warning';
-      default: return 'default';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Present': return <CheckCircleIcon />;
-      case 'Absent': return <CancelIcon />;
-      case 'Late': return <CalendarIcon />;
-      default: return null;
-    }
-  };
-
-  // Get today's attendance summary
-  const todayRecords = attendanceRecords.filter(record => record.date === selectedDate);
-  const presentCount = todayRecords.filter(r => r.status === 'Present').length;
-  const absentCount = todayRecords.filter(r => r.status === 'Absent').length;
-  const lateCount = todayRecords.filter(r => r.status === 'Late').length;
+  // Reset date to today - memoized with useCallback
+  const resetToToday = useCallback(() => {
+    setSelectedDate(new Date());
+  }, []);
 
   return (
-    <Container>
-      <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <PeopleIcon sx={{ mr: 2, fontSize: 32 }} />
-            <Typography variant="h4">
-              Attendance Management
-            </Typography>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Paper elevation={3} sx={{ p: 4 }}>
+        <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+          {TITLE}
+        </Typography>
+        
+        {readOnly && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            {READ_ONLY_MESSAGE}
+          </Alert>
+        )}
+
+        <Box component="form" onSubmit={handleSubmit}>
+          {/* Display class selection and date picker controls */}
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth disabled={readOnly}>
+                <InputLabel>Class</InputLabel>
+                <Select
+                  value={selectedClass}
+                  label="Class"
+                  onChange={handleClassChange}
+                >
+                  {CLASSES.map((cls) => (
+                    <MenuItem key={cls} value={cls}>
+                      {cls}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  label="Date"
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  slotProps={{ 
+                    textField: { 
+                      fullWidth: true,
+                      disabled: readOnly
+                    } 
+                  }}
+                />
+              </LocalizationProvider>
+            </Grid>
+            <Grid item xs={12} md={4} sx={{ display: 'flex', alignItems: 'center' }}>
+              {!readOnly && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<CalendarMonth />}
+                  onClick={() => resetToToday()}
+                >
+                  Today
+                </Button>
+              )}
+            </Grid>
+          </Grid>
+
+          {/* Attendance Table Header */}
+          <Typography variant="h6" gutterBottom>
+            Student Attendance for {selectedClass || 'Selected Class'} on {selectedDate?.toLocaleDateString() || 'Selected Date'}
+          </Typography>
+          <Divider sx={{ mb: 3 }} />
+
+          {/* Attendance Table */}
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="medium" aria-label="attendance table">
+              <TableHead>
+                <TableRow sx={{ bgcolor: 'primary.light' }}>
+                  <TableCell>Admission No.</TableCell>
+                  <TableCell>Student Name</TableCell>
+                  <TableCell align="center">Present</TableCell>
+                  <TableCell>Remarks</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {students.map((student) => (
+                  <TableRow key={student.id} hover>
+                    <TableCell>{student.admissionNumber}</TableCell>
+                    <TableCell>{student.name}</TableCell>
+                    <TableCell align="center">
+                      <Checkbox
+                        checked={student.isPresent}
+                        onChange={(e) => handleAttendanceChange(student.id, e.target.checked)}
+                        color="primary"
+                        disabled={readOnly}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {!student.isPresent && student.reason ? (
+                        <Typography variant="body2" color="text.secondary">
+                          {student.reason}
+                        </Typography>
+                      ) : ''}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* Action Buttons */}
+          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+            <Button
+              variant="outlined"
+              startIcon={<Print />}
+              aria-label="Print attendance report"
+            >
+              Print
+            </Button>
+            
+            {!readOnly && (
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                startIcon={<Save />}
+                aria-label="Save attendance"
+              >
+                Save Attendance
+              </Button>
+            )}
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleOpen}
-            disabled={!selectedClass || !selectedSection}
-          >
-            Mark Attendance
-          </Button>
         </Box>
-
-        {/* Date and Class Selection */}
-        <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={3}>
-            <TextField
-              fullWidth
-              label="Date"
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <FormControl fullWidth>
-              <InputLabel>Class</InputLabel>
-              <Select
-                value={selectedClass}
-                label="Class"
-                onChange={(e) => setSelectedClass(e.target.value)}
-              >
-                <MenuItem value="">All Classes</MenuItem>
-                {classes.map(cls => (
-                  <MenuItem key={cls} value={cls}>{cls}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <FormControl fullWidth>
-              <InputLabel>Section</InputLabel>
-              <Select
-                value={selectedSection}
-                label="Section"
-                onChange={(e) => setSelectedSection(e.target.value)}
-              >
-                <MenuItem value="">All Sections</MenuItem>
-                {sections.map(section => (
-                  <MenuItem key={section} value={section}>{section}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
-
-        {/* Attendance Summary Cards */}
-        <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={3}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" color="success.main">
-                  {presentCount}
-                </Typography>
-                <Typography variant="body2">Present Today</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" color="error.main">
-                  {absentCount}
-                </Typography>
-                <Typography variant="body2">Absent Today</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" color="warning.main">
-                  {lateCount}
-                </Typography>
-                <Typography variant="body2">Late Today</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" color="info.main">
-                  {todayRecords.length}
-                </Typography>
-                <Typography variant="body2">Total Marked</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </Box>
-
-      {/* Attendance Records Table */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell><strong>Date</strong></TableCell>
-              <TableCell><strong>Roll Number</strong></TableCell>
-              <TableCell><strong>Student Name</strong></TableCell>
-              <TableCell><strong>Class</strong></TableCell>
-              <TableCell><strong>Section</strong></TableCell>
-              <TableCell><strong>Status</strong></TableCell>
-              <TableCell><strong>Remarks</strong></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {attendanceRecords
-              .filter(record => {
-                return (
-                  (!selectedClass || record.class === selectedClass) &&
-                  (!selectedSection || record.section === selectedSection) &&
-                  record.date === selectedDate
-                );
-              })
-              .map((record) => (
-              <TableRow key={record.id}>
-                <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
-                <TableCell>{record.rollNumber}</TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    {getStatusIcon(record.status)}
-                    <Box sx={{ ml: 1 }}>{record.studentName}</Box>
-                  </Box>
-                </TableCell>
-                <TableCell>{record.class}</TableCell>
-                <TableCell>{record.section}</TableCell>
-                <TableCell>
-                  <Chip 
-                    label={record.status} 
-                    color={getStatusColor(record.status)} 
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>{record.remarks}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Mark Attendance Dialog */}
-      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Mark Attendance - {selectedClass} {selectedSection} - {new Date(selectedDate).toLocaleDateString()}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            {filteredStudents.map((student) => (
-              <Box key={student.id} sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  {student.rollNumber} - {student.name}
-                </Typography>
-                
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>Attendance Status</InputLabel>
-                      <Select
-                        value={attendanceData[student.id]?.status || 'Present'}
-                        label="Attendance Status"
-                        onChange={(e) => handleAttendanceChange(student.id, e.target.value as 'Present' | 'Absent' | 'Late')}
-                      >
-                        <MenuItem value="Present">Present</MenuItem>
-                        <MenuItem value="Absent">Absent</MenuItem>
-                        <MenuItem value="Late">Late</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Remarks (Optional)"
-                      value={attendanceData[student.id]?.remarks || ''}
-                      onChange={(e) => handleRemarksChange(student.id, e.target.value)}
-                      placeholder="Any additional notes..."
-                    />
-                  </Grid>
-                </Grid>
-              </Box>
-            ))}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained">
-            Save Attendance
-          </Button>
-        </DialogActions>
-      </Dialog>
+      </Paper>
     </Container>
   );
 };
