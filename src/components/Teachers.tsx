@@ -49,47 +49,62 @@ interface Teacher {
 }
 
 const Teachers: React.FC = () => {
-  const [teachers, setTeachers] = useState<Teacher[]>([
-    {
-      id: 1,
-      employeeId: 'EMP001',
-      name: 'डॉ. अनिता शर्मा',
-      email: 'anita@school.com',
-      phone: '9876543210',
-      subject: 'गणित',
-      qualification: 'M.Sc Mathematics',
-      experience: '10 years',
-      salary: '₹50,000',
-      joiningDate: '2020-01-15',
-      status: 'Active'
-    },
-    {
-      id: 2,
-      employeeId: 'EMP002',
-      name: 'राजेश कुमार',
-      email: 'rajesh@school.com',
-      phone: '9876543211',
-      subject: 'भौतिक विज्ञान',
-      qualification: 'M.Sc Physics',
-      experience: '8 years',
-      salary: '₹45,000',
-      joiningDate: '2021-03-20',
-      status: 'Active'
-    },
-    {
-      id: 3,
-      employeeId: 'EMP003',
-      name: 'सुनीता वर्मा',
-      email: 'sunita@school.com',
-      phone: '9876543212',
-      subject: 'अंग्रेजी',
-      qualification: 'M.A English',
-      experience: '12 years',
-      salary: '₹48,000',
-      joiningDate: '2019-07-10',
-      status: 'Inactive'
+  // localStorage से data load करें या default data use करें
+  const getInitialTeachers = (): Teacher[] => {
+    const savedTeachers = localStorage.getItem('school-erp-teachers');
+    if (savedTeachers) {
+      return JSON.parse(savedTeachers);
     }
-  ]);
+    return [
+      {
+        id: 1,
+        employeeId: 'EMP001',
+        name: 'डॉ. अनिता शर्मा',
+        email: 'anita@school.com',
+        phone: '9876543210',
+        subject: 'गणित',
+        qualification: 'M.Sc Mathematics',
+        experience: '10 years',
+        salary: '₹50,000',
+        joiningDate: '2020-01-15',
+        status: 'Active'
+      },
+      {
+        id: 2,
+        employeeId: 'EMP002',
+        name: 'राजेश कुमार',
+        email: 'rajesh@school.com',
+        phone: '9876543211',
+        subject: 'भौतिक विज्ञान',
+        qualification: 'M.Sc Physics',
+        experience: '8 years',
+        salary: '₹45,000',
+        joiningDate: '2021-03-20',
+        status: 'Active'
+      },
+      {
+        id: 3,
+        employeeId: 'EMP003',
+        name: 'सुनीता वर्मा',
+        email: 'sunita@school.com',
+        phone: '9876543212',
+        subject: 'अंग्रेजी',
+        qualification: 'M.A English',
+        experience: '12 years',
+        salary: '₹48,000',
+        joiningDate: '2019-07-10',
+        status: 'Inactive'
+      }
+    ];
+  };
+
+  const [teachers, setTeachers] = useState<Teacher[]>(getInitialTeachers);
+
+  // localStorage में teachers को save करने का function
+  const saveTeachersToStorage = (updatedTeachers: Teacher[]) => {
+    localStorage.setItem('school-erp-teachers', JSON.stringify(updatedTeachers));
+    setTeachers(updatedTeachers);
+  };
 
   const [open, setOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
@@ -136,11 +151,12 @@ const Teachers: React.FC = () => {
 
   const handleSubmit = () => {
     if (editingTeacher) {
-      setTeachers(teachers.map(t => 
+      const updatedTeachers = teachers.map(t => 
         t.id === editingTeacher.id 
           ? { ...editingTeacher, ...formData }
           : t
-      ));
+      );
+      saveTeachersToStorage(updatedTeachers);
     } else {
       const newTeacher: Teacher = {
         id: Math.max(...teachers.map(t => t.id)) + 1,
@@ -155,13 +171,14 @@ const Teachers: React.FC = () => {
         joiningDate: formData.joiningDate || '',
         status: formData.status as 'Active' | 'Inactive' || 'Active'
       };
-      setTeachers([...teachers, newTeacher]);
+      saveTeachersToStorage([...teachers, newTeacher]);
     }
     handleClose();
   };
 
   const handleDelete = (id: number) => {
-    setTeachers(teachers.filter(t => t.id !== id));
+    const updatedTeachers = teachers.filter(t => t.id !== id);
+    saveTeachersToStorage(updatedTeachers);
   };
 
   const getStatusColor = (status: string) => {

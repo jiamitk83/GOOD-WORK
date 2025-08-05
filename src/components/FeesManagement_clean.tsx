@@ -383,7 +383,7 @@ const FeesManagement: React.FC = () => {
               ...sf,
               paidAmount: sf.paidAmount + paymentData.amount,
               pendingAmount: sf.pendingAmount - paymentData.amount,
-              status: (sf.pendingAmount - paymentData.amount) === 0 ? 'Paid' as const : 'Partial' as const,
+              status: (sf.pendingAmount - paymentData.amount) === 0 ? 'Paid' : 'Partial',
               lastPaymentDate: new Date().toISOString().split('T')[0]
             }
           : sf

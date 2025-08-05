@@ -46,33 +46,39 @@ interface Course {
 }
 
 const Courses: React.FC = () => {
-  const [courses, setCourses] = useState<Course[]>([
-    {
-      id: 1,
-      courseCode: 'MATH10A',
-      courseName: 'गणित - कक्षा 10',
-      description: 'बीजगणित, ज्यामिति और त्रिकोणमिति के मूल सिद्धांत',
-      teacher: 'डॉ. अनिता शर्मा',
-      class: '10th',
-      subject: 'गणित',
-      duration: '1 वर्ष',
-      credits: 6,
-      schedule: 'सोम, बुध, शुक्र - 9:00 AM',
-      status: 'Active'
-    },
-    {
-      id: 2,
-      courseCode: 'PHY10A',
-      courseName: 'भौतिक विज्ञान - कक्षा 10',
-      description: 'प्रकाश, विद्युत और गति के नियम',
-      teacher: 'राजेश कुमार',
-      class: '10th',
-      subject: 'भौतिक विज्ञान',
-      duration: '1 वर्ष',
-      credits: 6,
-      schedule: 'मंगल, गुरु, शनि - 10:00 AM',
-      status: 'Active'
-    },
+  // localStorage से data load करें या default data use करें
+  const getInitialCourses = (): Course[] => {
+    const savedCourses = localStorage.getItem('school-erp-courses');
+    if (savedCourses) {
+      return JSON.parse(savedCourses);
+    }
+    return [
+      {
+        id: 1,
+        courseCode: 'MATH10A',
+        courseName: 'गणित - कक्षा 10',
+        description: 'बीजगणित, ज्यामिति और त्रिकोणमिति के मूल सिद्धांत',
+        teacher: 'डॉ. अनिता शर्मा',
+        class: '10th',
+        subject: 'गणित',
+        duration: '1 वर्ष',
+        credits: 6,
+        schedule: 'सोम, बुध, शुक्र - 9:00 AM',
+        status: 'Active'
+      },
+      {
+        id: 2,
+        courseCode: 'PHY10A',
+        courseName: 'भौतिक विज्ञान - कक्षा 10',
+        description: 'प्रकाश, विद्युत और गति के नियम',
+        teacher: 'राजेश कुमार',
+        class: '10th',
+        subject: 'भौतिक विज्ञान',
+        duration: '1 वर्ष',
+        credits: 6,
+        schedule: 'मंगल, गुरु, शनि - 10:00 AM',
+        status: 'Active'
+      },
     {
       id: 3,
       courseCode: 'ENG9A',
@@ -99,7 +105,16 @@ const Courses: React.FC = () => {
       schedule: 'सोम, गुरु - 2:00 PM',
       status: 'Active'
     }
-  ]);
+    ];
+  };
+
+  const [courses, setCourses] = useState<Course[]>(getInitialCourses);
+
+  // localStorage में courses को save करने का function
+  const saveCoursesToStorage = (updatedCourses: Course[]) => {
+    localStorage.setItem('school-erp-courses', JSON.stringify(updatedCourses));
+    setCourses(updatedCourses);
+  };
 
   const [open, setOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -146,11 +161,12 @@ const Courses: React.FC = () => {
 
   const handleSubmit = () => {
     if (editingCourse) {
-      setCourses(courses.map(c => 
+      const updatedCourses = courses.map(c => 
         c.id === editingCourse.id 
           ? { ...editingCourse, ...formData }
           : c
-      ));
+      );
+      saveCoursesToStorage(updatedCourses);
     } else {
       const newCourse: Course = {
         id: Math.max(...courses.map(c => c.id)) + 1,
@@ -165,13 +181,14 @@ const Courses: React.FC = () => {
         schedule: formData.schedule || '',
         status: formData.status as 'Active' | 'Inactive' || 'Active'
       };
-      setCourses([...courses, newCourse]);
+      saveCoursesToStorage([...courses, newCourse]);
     }
     handleClose();
   };
 
   const handleDelete = (id: number) => {
-    setCourses(courses.filter(c => c.id !== id));
+    const updatedCourses = courses.filter(c => c.id !== id);
+    saveCoursesToStorage(updatedCourses);
   };
 
   const getStatusColor = (status: string) => {
@@ -473,3 +490,4 @@ const Courses: React.FC = () => {
 };
 
 export default Courses;
+

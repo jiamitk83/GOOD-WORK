@@ -19,7 +19,9 @@ import {
   Person as PersonIcon,
   MenuBook as BookIcon,
   Quiz as ExamIcon,
-  AttachMoney as MoneyIcon
+  AttachMoney as MoneyIcon,
+  People as PeopleIcon,
+  Assignment as AttendanceIcon
 } from '@mui/icons-material';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Login';
@@ -29,9 +31,11 @@ import Teachers from './components/Teachers';
 import Courses from './components/Courses';
 import Examinations from './components/Examinations';
 import FeesManagement from './components/FeesManagement';
+import UserManagement from './components/UserManagement';
+import Attendance from './components/Attendance';
 
 const AppContent = () => {
-  const { user, logout, isAuthenticated, login } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -48,7 +52,7 @@ const AppContent = () => {
   };
 
   if (!isAuthenticated) {
-    return <Login onLogin={login} />;
+    return <Login />;
   }
 
   return (
@@ -124,9 +128,33 @@ const AppContent = () => {
                 component={Link} 
                 to="/fees"
                 startIcon={<MoneyIcon />}
-                sx={{ mr: 2 }}
+                sx={{ mr: 1 }}
               >
                 Fees
+              </Button>
+            )}
+            
+            {user?.userType === 'admin' && (
+              <Button 
+                color="inherit" 
+                component={Link} 
+                to="/users"
+                startIcon={<PeopleIcon />}
+                sx={{ mr: 1 }}
+              >
+                Users
+              </Button>
+            )}
+            
+            {(user?.userType === 'admin' || user?.userType === 'teacher') && (
+              <Button 
+                color="inherit" 
+                component={Link} 
+                to="/attendance"
+                startIcon={<AttendanceIcon />}
+                sx={{ mr: 1 }}
+              >
+                Attendance
               </Button>
             )}
             <Box sx={{ ml: 2 }}>
@@ -173,6 +201,9 @@ const AppContent = () => {
             <Route path="/teachers" element={<Teachers />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/examinations" element={<Examinations />} />
+            <Route path="/fees" element={<FeesManagement />} />
+            <Route path="/users" element={<UserManagement />} />
+            <Route path="/attendance" element={<Attendance />} />
           </Routes>
         </Box>
       </Box>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import {
   Container,
   Typography,
@@ -46,44 +47,63 @@ interface Student {
 }
 
 const Students: React.FC = () => {
-  const [students, setStudents] = useState<Student[]>([
-    {
-      id: 1,
-      rollNumber: 'STU001',
-      name: 'राहुल शर्मा',
-      email: 'rahul@email.com',
-      phone: '9876543210',
-      class: '10th',
-      section: 'A',
-      dateOfBirth: '2008-05-15',
-      address: 'दिल्ली, इंडिया',
-      status: 'Active'
-    },
-    {
-      id: 2,
-      rollNumber: 'STU002',
-      name: 'प्रिया गुप्ता',
-      email: 'priya@email.com',
-      phone: '9876543211',
-      class: '10th',
-      section: 'B',
-      dateOfBirth: '2008-08-22',
-      address: 'मुंबई, इंडिया',
-      status: 'Active'
-    },
-    {
-      id: 3,
-      rollNumber: 'STU003',
-      name: 'अमित कुमार',
-      email: 'amit@email.com',
-      phone: '9876543212',
-      class: '9th',
-      section: 'A',
-      dateOfBirth: '2009-02-10',
-      address: 'बैंगलोर, इंडिया',
-      status: 'Inactive'
+  // localStorage से data load करें या default data use करें
+  const getInitialStudents = (): Student[] => {
+    const savedStudents = localStorage.getItem('school-erp-students');
+    if (savedStudents) {
+      return JSON.parse(savedStudents);
     }
-  ]);
+    return [
+      {
+        id: 1,
+        rollNumber: 'STU001',
+        name: 'राहुल शर्मा',
+        email: 'rahul@email.com',
+        phone: '9876543210',
+        class: '10th',
+        section: 'A',
+        dateOfBirth: '2008-05-15',
+        address: 'दिल्ली, इंडिया',
+        status: 'Active'
+      },
+      {
+        id: 2,
+        rollNumber: 'STU002',
+        name: 'प्रिया गुप्ता',
+        email: 'priya@email.com',
+        phone: '9876543211',
+        class: '10th',
+        section: 'B',
+        dateOfBirth: '2008-08-22',
+        address: 'मुंबई, इंडिया',
+        status: 'Active'
+      },
+      {
+        id: 3,
+        rollNumber: 'STU003',
+        name: 'अमित कुमार',
+        email: 'amit@email.com',
+        phone: '9876543212',
+        class: '9th',
+        section: 'A',
+        dateOfBirth: '2009-02-10',
+        address: 'बैंगलोर, इंडिया',
+        status: 'Inactive'
+      }
+    ];
+  };
+
+  const [students, setStudents] = useState<Student[]>(getInitialStudents);
+  
+  // Auth context से user role check करें
+  const { user } = useAuth();
+  const isAdmin = user?.userType === 'admin';
+
+  // localStorage में students को save करने का function
+  const saveStudentsToStorage = (updatedStudents: Student[]) => {
+    localStorage.setItem('school-erp-students', JSON.stringify(updatedStudents));
+    setStudents(updatedStudents);
+  };
 
   const [open, setOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -129,11 +149,12 @@ const Students: React.FC = () => {
   const handleSubmit = () => {
     if (editingStudent) {
       // Update existing student
-      setStudents(students.map(s => 
+      const updatedStudents = students.map(s => 
         s.id === editingStudent.id 
           ? { ...editingStudent, ...formData }
           : s
-      ));
+      );
+      saveStudentsToStorage(updatedStudents);
     } else {
       // Add new student
       const newStudent: Student = {
@@ -148,13 +169,14 @@ const Students: React.FC = () => {
         address: formData.address || '',
         status: formData.status as 'Active' | 'Inactive' || 'Active'
       };
-      setStudents([...students, newStudent]);
+      saveStudentsToStorage([...students, newStudent]);
     }
     handleClose();
   };
 
   const handleDelete = (id: number) => {
-    setStudents(students.filter(s => s.id !== id));
+    const updatedStudents = students.filter(s => s.id !== id);
+    saveStudentsToStorage(updatedStudents);
   };
 
   const getStatusColor = (status: string) => {
@@ -171,13 +193,15 @@ const Students: React.FC = () => {
               Students Management
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpen()}
-          >
-            Add New Student
-          </Button>
+          {isAdmin && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpen()}
+            >
+              Add New Student
+            </Button>
+          )}
         </Box>
 
         <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -244,18 +268,22 @@ const Students: React.FC = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  <IconButton 
-                    color="primary" 
-                    onClick={() => handleOpen(student)}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton 
-                    color="error" 
-                    onClick={() => handleDelete(student.id)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                  {isAdmin && (
+                    <>
+                      <IconButton 
+                        color="primary" 
+                        onClick={() => handleOpen(student)}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton 
+                        color="error" 
+                        onClick={() => handleDelete(student.id)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

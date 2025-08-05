@@ -8,6 +8,12 @@ const FeesBasic = () => {
       <div style={{ background: 'green', color: 'white', padding: '10px', marginTop: '10px' }}>
         ✅ SUCCESS: Fees component loaded!
       </div>
+      <div style={{ background: 'blue', color: 'white', padding: '10px', marginTop: '10px' }}>
+        🚀 CODE UPDATED: यह नया change है जो अब build में reflect होगा!
+      </div>
+      <p style={{ color: 'red', fontWeight: 'bold' }}>
+        📅 Last Updated: {new Date().toLocaleString()}
+      </p>
     </div>
   );
 };
