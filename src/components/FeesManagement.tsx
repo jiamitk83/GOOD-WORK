@@ -1,52 +1,65 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  Typography,
   Container,
+  Typography,
   Paper,
-  Tabs,
-  Tab,
+  Box,
   Grid,
-  Card,
-  CardContent,
   Button,
+  TextField,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Select,
-  Chip,
   IconButton,
-  Divider,
-  Alert,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  SelectChangeEvent
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Tabs,
+  Tab,
+  Chip,
+  Divider,
+  Card,
+  CardContent,
+  Snackbar,
+  Alert,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Tooltip,
+  Autocomplete
 } from '@mui/material';
-import {
-  Payment,
-  Receipt,
-  AttachMoney,
-  Assignment,
-  Add,
-  Edit,
-  Delete,
-  Print,
-  CurrencyRupee,
-  ReceiptLong,
-  AccountBalance,
-  ViewList,
-  Save,
-  Cancel
+import { 
+  Add, 
+  Delete, 
+  Edit, 
+  Search, 
+  Done, 
+  Warning, 
+  ErrorOutline, 
+  Print, 
+  Download, 
+  MenuBook, 
+  ReceiptLong, 
+  MonetizationOn, 
+  BarChart, 
+  Receipt, 
+  Payments, 
+  History
 } from '@mui/icons-material';
+import { format } from 'date-fns';
+import { useAuth } from '../context/useAuth';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -66,7 +79,7 @@ function TabPanel(props: TabPanelProps) {
       {...other}
     >
       {value === index && (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ pt: 3 }}>
           {children}
         </Box>
       )}
@@ -74,952 +87,1401 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-// Mock data for fee structure
-const mockFeeStructure = [
-  { id: 1, class: '1st Standard', category: 'Tuition Fee', amount: 10000, frequency: 'Monthly', dueDay: 10 },
-  { id: 2, class: '1st Standard', category: 'Development Fee', amount: 5000, frequency: 'Annual', dueDay: 15 },
-  { id: 3, class: '2nd Standard', category: 'Tuition Fee', amount: 12000, frequency: 'Monthly', dueDay: 10 },
-  { id: 4, class: '2nd Standard', category: 'Development Fee', amount: 6000, frequency: 'Annual', dueDay: 15 },
-  { id: 5, class: '3rd Standard', category: 'Tuition Fee', amount: 14000, frequency: 'Monthly', dueDay: 10 },
-  { id: 6, class: '3rd Standard', category: 'Development Fee', amount: 7000, frequency: 'Annual', dueDay: 15 },
-];
-
-// Mock data for student payments
-const mockPayments = [
-  { id: 1, studentId: 'STU001', studentName: 'Rahul Sharma', class: '1st Standard', amount: 10000, category: 'Tuition Fee', paymentDate: '2025-07-05', paymentMode: 'Online', status: 'Paid', receiptNo: 'RCP00123' },
-  { id: 2, studentId: 'STU002', studentName: 'Priya Patel', class: '2nd Standard', amount: 12000, category: 'Tuition Fee', paymentDate: '2025-07-08', paymentMode: 'Cash', status: 'Paid', receiptNo: 'RCP00124' },
-  { id: 3, studentId: 'STU003', studentName: 'Amit Kumar', class: '3rd Standard', amount: 14000, category: 'Tuition Fee', paymentDate: null, paymentMode: null, status: 'Pending', receiptNo: null },
-  { id: 4, studentId: 'STU004', studentName: 'Sneha Gupta', class: '1st Standard', amount: 5000, category: 'Development Fee', paymentDate: '2025-04-10', paymentMode: 'Cheque', status: 'Paid', receiptNo: 'RCP00100' },
-  { id: 5, studentId: 'STU005', studentName: 'Vikram Singh', class: '2nd Standard', amount: 6000, category: 'Development Fee', paymentDate: null, paymentMode: null, status: 'Pending', receiptNo: null },
-];
-
-// Mock data for fee categories
-const feeCategories = ['Tuition Fee', 'Development Fee', 'Computer Fee', 'Library Fee', 'Examination Fee', 'Sports Fee', 'Transport Fee'];
-
-// Mock data for classes
-const classes = ['Nursery', 'KG', '1st Standard', '2nd Standard', '3rd Standard', '4th Standard', '5th Standard', '6th Standard', '7th Standard', '8th Standard', '9th Standard', '10th Standard'];
-
-// Mock data for payment modes
-const paymentModes = ['Cash', 'Cheque', 'Online', 'UPI', 'Bank Transfer'];
-
-// Mock data for payment frequency
-const frequencies = ['Monthly', 'Quarterly', 'Half-Yearly', 'Annual'];
-
-interface FeesManagementProps {
-  readOnly?: boolean;
+// Types
+interface FeeStructure {
+  id: string;
+  name: string;
+  academicYear: string;
+  classId: string;
+  className: string;
+  total: number;
+  installments: number;
+  isActive: boolean;
+  components: FeeComponent[];
 }
 
-const FeesManagement: React.FC<FeesManagementProps> = ({ readOnly = false }) => {
-  const [tabValue, setTabValue] = useState(0);
-  const [feeStructure, setFeeStructure] = useState(mockFeeStructure);
-  const [payments, setPayments] = useState(mockPayments);
-  const [editFeeItem, setEditFeeItem] = useState<any>(null);
-  const [newPayment, setNewPayment] = useState({
-    studentId: '',
-    studentName: '',
-    class: '',
-    amount: 0,
-    category: '',
-    paymentDate: '',
-    paymentMode: '',
-    status: 'Paid',
+interface FeeComponent {
+  id: string;
+  name: string;
+  amount: number;
+  frequency: 'one-time' | 'monthly' | 'quarterly' | 'half-yearly' | 'yearly';
+  dueDate?: Date;
+}
+
+interface Student {
+  id: string;
+  name: string;
+  admissionNumber: string;
+  class: string;
+  section: string;
+}
+
+interface FeePayment {
+  id: string;
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  className: string;
+  section: string;
+  receiptNumber: string;
+  amount: number;
+  paymentDate: Date;
+  paymentMethod: 'cash' | 'cheque' | 'bank-transfer' | 'online';
+  status: 'paid' | 'pending' | 'failed' | 'refunded';
+  academicYear: string;
+  feeType: string;
+  description: string;
+}
+
+interface DuesFeeStatus {
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  className: string;
+  section: string;
+  totalFees: number;
+  totalPaid: number;
+  totalDue: number;
+  nextDueDate: Date;
+  status: 'paid' | 'partially-paid' | 'overdue';
+}
+
+// Sample data
+const academicYears = ['2024-2025', '2025-2026'];
+const classes = ['8', '9', '10', '11', '12'];
+
+// Sample fee structures
+const sampleFeeStructures: FeeStructure[] = [
+  {
+    id: '1',
+    name: 'Regular Fee - Class 8',
+    academicYear: '2025-2026',
+    classId: '8',
+    className: 'Class 8',
+    total: 45000,
+    installments: 4,
+    isActive: true,
+    components: [
+      { id: '1', name: 'Tuition Fee', amount: 30000, frequency: 'yearly' },
+      { id: '2', name: 'Development Fee', amount: 5000, frequency: 'yearly' },
+      { id: '3', name: 'Laboratory Fee', amount: 3000, frequency: 'yearly' },
+      { id: '4', name: 'Library Fee', amount: 2000, frequency: 'yearly' },
+      { id: '5', name: 'Computer Fee', amount: 3000, frequency: 'yearly' },
+      { id: '6', name: 'Sports Fee', amount: 2000, frequency: 'yearly' }
+    ]
+  },
+  {
+    id: '2',
+    name: 'Regular Fee - Class 9',
+    academicYear: '2025-2026',
+    classId: '9',
+    className: 'Class 9',
+    total: 48000,
+    installments: 4,
+    isActive: true,
+    components: [
+      { id: '7', name: 'Tuition Fee', amount: 32000, frequency: 'yearly' },
+      { id: '8', name: 'Development Fee', amount: 6000, frequency: 'yearly' },
+      { id: '9', name: 'Laboratory Fee', amount: 3000, frequency: 'yearly' },
+      { id: '10', name: 'Library Fee', amount: 2000, frequency: 'yearly' },
+      { id: '11', name: 'Computer Fee', amount: 3000, frequency: 'yearly' },
+      { id: '12', name: 'Sports Fee', amount: 2000, frequency: 'yearly' }
+    ]
+  },
+  {
+    id: '3',
+    name: 'Regular Fee - Class 10',
+    academicYear: '2025-2026',
+    classId: '10',
+    className: 'Class 10',
+    total: 52000,
+    installments: 4,
+    isActive: true,
+    components: [
+      { id: '13', name: 'Tuition Fee', amount: 35000, frequency: 'yearly' },
+      { id: '14', name: 'Development Fee', amount: 6000, frequency: 'yearly' },
+      { id: '15', name: 'Laboratory Fee', amount: 4000, frequency: 'yearly' },
+      { id: '16', name: 'Library Fee', amount: 2000, frequency: 'yearly' },
+      { id: '17', name: 'Computer Fee', amount: 3000, frequency: 'yearly' },
+      { id: '18', name: 'Sports Fee', amount: 2000, frequency: 'yearly' }
+    ]
+  },
+  {
+    id: '4',
+    name: 'Science Stream - Class 11',
+    academicYear: '2025-2026',
+    classId: '11',
+    className: 'Class 11 (Science)',
+    total: 60000,
+    installments: 4,
+    isActive: true,
+    components: [
+      { id: '19', name: 'Tuition Fee', amount: 40000, frequency: 'yearly' },
+      { id: '20', name: 'Development Fee', amount: 8000, frequency: 'yearly' },
+      { id: '21', name: 'Laboratory Fee', amount: 5000, frequency: 'yearly' },
+      { id: '22', name: 'Library Fee', amount: 2000, frequency: 'yearly' },
+      { id: '23', name: 'Computer Fee', amount: 3000, frequency: 'yearly' },
+      { id: '24', name: 'Sports Fee', amount: 2000, frequency: 'yearly' }
+    ]
+  }
+];
+
+// Sample students
+const sampleStudents: Student[] = [
+  { id: '1', name: 'Alex Johnson', admissionNumber: 'ADM2025001', class: '8', section: 'A' },
+  { id: '2', name: 'Sarah Williams', admissionNumber: 'ADM2025002', class: '8', section: 'A' },
+  { id: '3', name: 'Michael Brown', admissionNumber: 'ADM2025003', class: '9', section: 'B' },
+  { id: '4', name: 'Emma Davis', admissionNumber: 'ADM2025004', class: '10', section: 'A' },
+  { id: '5', name: 'James Wilson', admissionNumber: 'ADM2025005', class: '11', section: 'Science' },
+  { id: '6', name: 'Olivia Martinez', admissionNumber: 'ADM2025006', class: '12', section: 'Commerce' }
+];
+
+// Sample fee payments
+const sampleFeePayments: FeePayment[] = [
+  {
+    id: '1',
+    studentId: '1',
+    studentName: 'Alex Johnson',
+    admissionNumber: 'ADM2025001',
+    className: 'Class 8',
+    section: 'A',
+    receiptNumber: 'REC2025001',
+    amount: 11250,
+    paymentDate: new Date('2025-04-15'),
+    paymentMethod: 'online',
+    status: 'paid',
+    academicYear: '2025-2026',
+    feeType: 'Tuition Fee - Q1',
+    description: 'First quarter tuition fee payment'
+  },
+  {
+    id: '2',
+    studentId: '1',
+    studentName: 'Alex Johnson',
+    admissionNumber: 'ADM2025001',
+    className: 'Class 8',
+    section: 'A',
+    receiptNumber: 'REC2025045',
+    amount: 11250,
+    paymentDate: new Date('2025-07-10'),
+    paymentMethod: 'cash',
+    status: 'paid',
+    academicYear: '2025-2026',
+    feeType: 'Tuition Fee - Q2',
+    description: 'Second quarter tuition fee payment'
+  },
+  {
+    id: '3',
+    studentId: '2',
+    studentName: 'Sarah Williams',
+    admissionNumber: 'ADM2025002',
+    className: 'Class 8',
+    section: 'A',
+    receiptNumber: 'REC2025002',
+    amount: 11250,
+    paymentDate: new Date('2025-04-12'),
+    paymentMethod: 'bank-transfer',
+    status: 'paid',
+    academicYear: '2025-2026',
+    feeType: 'Tuition Fee - Q1',
+    description: 'First quarter tuition fee payment'
+  },
+  {
+    id: '4',
+    studentId: '3',
+    studentName: 'Michael Brown',
+    admissionNumber: 'ADM2025003',
+    className: 'Class 9',
+    section: 'B',
+    receiptNumber: 'REC2025003',
+    amount: 12000,
+    paymentDate: new Date('2025-04-20'),
+    paymentMethod: 'cheque',
+    status: 'paid',
+    academicYear: '2025-2026',
+    feeType: 'Tuition Fee - Q1',
+    description: 'First quarter tuition fee payment'
+  },
+  {
+    id: '5',
+    studentId: '5',
+    studentName: 'James Wilson',
+    admissionNumber: 'ADM2025005',
+    className: 'Class 11',
+    section: 'Science',
+    receiptNumber: 'REC2025005',
+    amount: 15000,
+    paymentDate: new Date('2025-04-05'),
+    paymentMethod: 'online',
+    status: 'paid',
+    academicYear: '2025-2026',
+    feeType: 'Tuition Fee - Q1',
+    description: 'First quarter tuition fee payment'
+  }
+];
+
+// Generate fee status data
+const generateFeeStatus = (): DuesFeeStatus[] => {
+  return sampleStudents.map(student => {
+    const feeStructure = sampleFeeStructures.find(
+      fs => fs.className.includes(student.class)
+    );
+    
+    const totalFees = feeStructure?.total || 0;
+    
+    const studentPayments = sampleFeePayments.filter(
+      payment => payment.studentId === student.id && payment.status === 'paid'
+    );
+    
+    const totalPaid = studentPayments.reduce((sum, payment) => sum + payment.amount, 0);
+    const totalDue = totalFees - totalPaid;
+    
+    // Determine next due date based on current date
+    const currentDate = new Date('2025-08-07'); // Using the current date from context
+    let nextDueDate: Date;
+    
+    if (currentDate < new Date('2025-07-15')) {
+      nextDueDate = new Date('2025-07-15');
+    } else if (currentDate < new Date('2025-10-15')) {
+      nextDueDate = new Date('2025-10-15');
+    } else if (currentDate < new Date('2026-01-15')) {
+      nextDueDate = new Date('2026-01-15');
+    } else {
+      nextDueDate = new Date('2026-04-15');
+    }
+    
+    // Determine status
+    let status: 'paid' | 'partially-paid' | 'overdue';
+    if (totalDue <= 0) {
+      status = 'paid';
+    } else if (currentDate > nextDueDate) {
+      status = 'overdue';
+    } else {
+      status = 'partially-paid';
+    }
+    
+    return {
+      studentId: student.id,
+      studentName: student.name,
+      admissionNumber: student.admissionNumber,
+      className: `Class ${student.class}`,
+      section: student.section,
+      totalFees,
+      totalPaid,
+      totalDue,
+      nextDueDate,
+      status
+    };
   });
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isNewFeeDialogOpen, setIsNewFeeDialogOpen] = useState(false);
-  const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
-  const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
-  const [newFee, setNewFee] = useState({
-    class: '',
-    category: '',
-    amount: 0,
-    frequency: 'Monthly',
-    dueDay: 10,
+};
+
+const sampleFeeStatus = generateFeeStatus();
+
+const FeesManagement: React.FC = () => {
+  const { user, checkPermission } = useAuth();
+  const [tabValue, setTabValue] = useState(0);
+  const [feeStructures] = useState<FeeStructure[]>(sampleFeeStructures);
+  const [feePayments] = useState<FeePayment[]>(sampleFeePayments);
+  const [feeStatus] = useState<DuesFeeStatus[]>(sampleFeeStatus);
+  const [openStructureDialog, setOpenStructureDialog] = useState(false);
+  const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
+  const [selectedStructure, setSelectedStructure] = useState<FeeStructure | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [academicYear, setAcademicYear] = useState('2025-2026');
+  const [selectedClass, setSelectedClass] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error' | 'info' | 'warning'
   });
 
+  // Check permissions
+  const canManageFees = user?.role === 'admin' || checkPermission('manage_fees');
+  const canCollectFees = user?.role === 'admin' || checkPermission('collect_fees');
+  const canViewFees = user?.role === 'admin' || checkPermission('view_fees');
+
+  // Handle tab change
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
-  const handleEditFee = (fee: any) => {
-    setEditFeeItem(fee);
-  };
+  // Filter fee structures
+  const filteredFeeStructures = feeStructures.filter(structure => 
+    structure.academicYear === academicYear &&
+    (selectedClass === '' || structure.classId === selectedClass) &&
+    (searchTerm === '' || 
+      structure.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      structure.className.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
-  const handleSaveEditedFee = () => {
-    if (editFeeItem) {
-      setFeeStructure(feeStructure.map(fee => 
-        fee.id === editFeeItem.id ? editFeeItem : fee
-      ));
-      setEditFeeItem(null);
+  // Filter fee status
+  const filteredFeeStatus = feeStatus.filter(status => 
+    (selectedClass === '' || status.className.includes(selectedClass)) &&
+    (searchTerm === '' || 
+      status.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      status.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  // Filter fee payments
+  const filteredFeePayments = feePayments.filter(payment => 
+    payment.academicYear === academicYear &&
+    (selectedClass === '' || payment.className.includes(selectedClass)) &&
+    (searchTerm === '' || 
+      payment.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.receiptNumber.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  // Fee structure dialog handlers
+  const handleOpenStructureDialog = (structure?: FeeStructure) => {
+    if (structure) {
+      setSelectedStructure(structure);
+    } else {
+      setSelectedStructure(null);
     }
+    setOpenStructureDialog(true);
   };
 
-  const handleDeleteFee = (id: number) => {
-    setFeeStructure(feeStructure.filter(fee => fee.id !== id));
+  const handleCloseStructureDialog = () => {
+    setOpenStructureDialog(false);
   };
 
-  const handleOpenNewFeeDialog = () => {
-    setIsNewFeeDialogOpen(true);
-  };
-
-  const handleCloseNewFeeDialog = () => {
-    setIsNewFeeDialogOpen(false);
-  };
-
-  const handleAddNewFee = () => {
-    const newId = Math.max(...feeStructure.map(fee => fee.id)) + 1;
-    const feeToAdd = {
-      id: newId,
-      ...newFee
-    };
-    
-    setFeeStructure([...feeStructure, feeToAdd]);
-    setNewFee({
-      class: '',
-      category: '',
-      amount: 0,
-      frequency: 'Monthly',
-      dueDay: 10,
-    });
-    setIsNewFeeDialogOpen(false);
-  };
-
-  const handleNewFeeTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setNewFee({
-      ...newFee,
-      [name]: name === 'amount' || name === 'dueDay' ? Number(value) : value,
+  const handleSaveStructure = () => {
+    // In a real app, save fee structure data to the database
+    setOpenStructureDialog(false);
+    setSnackbar({
+      open: true,
+      message: selectedStructure ? 'Fee structure updated successfully' : 'Fee structure created successfully',
+      severity: 'success'
     });
   };
 
-  const handleNewFeeSelectChange = (e: SelectChangeEvent) => {
-    const { name, value } = e.target;
-    setNewFee({
-      ...newFee,
-      [name]: value,
-    });
-  };
-
-  const handleOpenPaymentDialog = () => {
-    setIsDialogOpen(true);
+  // Payment dialog handlers
+  const handleOpenPaymentDialog = (student?: Student) => {
+    if (student) {
+      setSelectedStudent(student);
+    } else {
+      setSelectedStudent(null);
+    }
+    setOpenPaymentDialog(true);
   };
 
   const handleClosePaymentDialog = () => {
-    setIsDialogOpen(false);
+    setOpenPaymentDialog(false);
   };
 
-  const handlePaymentTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setNewPayment({
-      ...newPayment,
-      [name]: name === 'amount' ? Number(value) : value,
+  const handleSavePayment = () => {
+    // In a real app, save payment data to the database
+    setOpenPaymentDialog(false);
+    setSnackbar({
+      open: true,
+      message: 'Payment recorded successfully',
+      severity: 'success'
     });
   };
 
-  const handlePaymentSelectChange = (e: SelectChangeEvent) => {
-    const { name, value } = e.target;
-    setNewPayment({
-      ...newPayment,
-      [name]: value,
+  // Handle snackbar close
+  const handleSnackbarClose = () => {
+    setSnackbar({
+      ...snackbar,
+      open: false
     });
   };
 
-  const handleAddPayment = () => {
-    const newId = Math.max(...payments.map(payment => payment.id)) + 1;
-    const newReceiptNo = `RCP${String(newId + 1000).slice(1)}`;
+  // Format currency
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  // Format date
+  const formatDate = (date: Date): string => {
+    return format(date, 'MMM dd, yyyy');
+  };
+
+  // Get status chip
+  const getStatusChip = (status: string) => {
+    let color: 'success' | 'error' | 'warning' | 'info' = 'info';
+    let icon = <Receipt />;
     
-    const paymentToAdd = {
-      id: newId,
-      ...newPayment,
-      status: 'Paid',
-      receiptNo: newReceiptNo,
-    };
+    switch(status) {
+      case 'paid':
+        color = 'success';
+        icon = <Done />;
+        break;
+      case 'partially-paid':
+        color = 'warning';
+        icon = <Warning />;
+        break;
+      case 'overdue':
+        color = 'error';
+        icon = <ErrorOutline />;
+        break;
+      case 'pending':
+        color = 'info';
+        icon = <Receipt />;
+        break;
+    }
     
-    setPayments([...payments, paymentToAdd]);
-    setNewPayment({
-      studentId: '',
-      studentName: '',
-      class: '',
-      amount: 0,
-      category: '',
-      paymentDate: '',
-      paymentMode: '',
-      status: 'Paid',
-    });
-    setIsDialogOpen(false);
+    return (
+      <Chip
+        icon={icon}
+        label={status.replace('-', ' ').toUpperCase()}
+        color={color}
+        size="small"
+      />
+    );
   };
 
-  const handleViewReceipt = (payment: any) => {
-    setSelectedReceipt(payment);
-    setIsReceiptDialogOpen(true);
-  };
+  // Calculate total amount collected
+  const totalCollected = filteredFeePayments
+    .filter(payment => payment.status === 'paid')
+    .reduce((sum, payment) => sum + payment.amount, 0);
 
-  const handleCloseReceiptDialog = () => {
-    setIsReceiptDialogOpen(false);
-  };
+  // Calculate pending dues
+  const totalDues = filteredFeeStatus.reduce((sum, status) => sum + status.totalDue, 0);
 
-  const handlePrintReceipt = () => {
-    alert('Printing receipt...');
-    // In a real app, this would handle the print functionality
-  };
+  if (!canViewFees) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Typography variant="h4" color="error">
+          You do not have permission to access Fee Management.
+        </Typography>
+      </Container>
+    );
+  }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ minHeight: '80vh' }}>
-        <Typography variant="h4" sx={{ p: 3, bgcolor: 'primary.main', color: 'white' }}>
-          Fees Management
-        </Typography>
-        
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs 
-            value={tabValue} 
-            onChange={handleTabChange} 
-            aria-label="fees management tabs"
-            variant="scrollable"
-            scrollButtons="auto"
-          >
-            <Tab icon={<AttachMoney />} label="Fee Structure" />
-            <Tab icon={<Receipt />} label="Payments" />
-            <Tab icon={<Assignment />} label="Fee Reports" />
-            <Tab icon={<AccountBalance />} label="Fee Statistics" />
-          </Tabs>
-        </Box>
-        
-        {/* Fee Structure Tab */}
-        <TabPanel value={tabValue} index={0}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h6">Fee Structure</Typography>
-            {!readOnly && (
-              <Button 
-                variant="contained" 
-                startIcon={<Add />}
-                onClick={handleOpenNewFeeDialog}
-              >
-                Add Fee
-              </Button>
-            )}
-          </Box>
-          
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: 'primary.light' }}>
-                  <TableCell>Class</TableCell>
-                  <TableCell>Fee Category</TableCell>
-                  <TableCell align="right">Amount (₹)</TableCell>
-                  <TableCell>Frequency</TableCell>
-                  <TableCell>Due Day</TableCell>
-                  {!readOnly && <TableCell align="center">Actions</TableCell>}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {feeStructure.map((fee) => (
-                  <TableRow key={fee.id}>
-                    <TableCell>
-                      {editFeeItem && editFeeItem.id === fee.id ? (
-                        <FormControl fullWidth size="small">
-                          <Select
-                            value={editFeeItem.class}
-                            onChange={(e) => setEditFeeItem({...editFeeItem, class: e.target.value})}
-                          >
-                            {classes.map((c) => (
-                              <MenuItem key={c} value={c}>{c}</MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      ) : (
-                        fee.class
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editFeeItem && editFeeItem.id === fee.id ? (
-                        <FormControl fullWidth size="small">
-                          <Select
-                            value={editFeeItem.category}
-                            onChange={(e) => setEditFeeItem({...editFeeItem, category: e.target.value})}
-                          >
-                            {feeCategories.map((category) => (
-                              <MenuItem key={category} value={category}>{category}</MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      ) : (
-                        fee.category
-                      )}
-                    </TableCell>
-                    <TableCell align="right">
-                      {editFeeItem && editFeeItem.id === fee.id ? (
-                        <TextField
-                          type="number"
-                          size="small"
-                          value={editFeeItem.amount}
-                          onChange={(e) => setEditFeeItem({...editFeeItem, amount: Number(e.target.value)})}
-                          InputProps={{
-                            startAdornment: <CurrencyRupee fontSize="small" />
-                          }}
-                        />
-                      ) : (
-                        `₹${fee.amount.toLocaleString()}`
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editFeeItem && editFeeItem.id === fee.id ? (
-                        <FormControl fullWidth size="small">
-                          <Select
-                            value={editFeeItem.frequency}
-                            onChange={(e) => setEditFeeItem({...editFeeItem, frequency: e.target.value})}
-                          >
-                            {frequencies.map((freq) => (
-                              <MenuItem key={freq} value={freq}>{freq}</MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      ) : (
-                        fee.frequency
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editFeeItem && editFeeItem.id === fee.id ? (
-                        <TextField
-                          type="number"
-                          size="small"
-                          value={editFeeItem.dueDay}
-                          onChange={(e) => setEditFeeItem({...editFeeItem, dueDay: Number(e.target.value)})}
-                          inputProps={{ min: 1, max: 31 }}
-                        />
-                      ) : (
-                        `${fee.dueDay}${getDaySuffix(fee.dueDay)} of the month`
-                      )}
-                    </TableCell>
-                    {!readOnly && (
-                      <TableCell align="center">
-                        {editFeeItem && editFeeItem.id === fee.id ? (
-                          <>
-                            <IconButton color="primary" onClick={handleSaveEditedFee}>
-                              <Save />
-                            </IconButton>
-                            <IconButton color="error" onClick={() => setEditFeeItem(null)}>
-                              <Cancel />
-                            </IconButton>
-                          </>
-                        ) : (
-                          <>
-                            <IconButton color="primary" onClick={() => handleEditFee(fee)}>
-                              <Edit />
-                            </IconButton>
-                            <IconButton color="error" onClick={() => handleDeleteFee(fee.id)}>
-                              <Delete />
-                            </IconButton>
-                          </>
-                        )}
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </TabPanel>
-        
-        {/* Payments Tab */}
-        <TabPanel value={tabValue} index={1}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h6">Fee Payments</Typography>
-            {!readOnly && (
-              <Button 
-                variant="contained" 
-                startIcon={<Payment />}
-                onClick={handleOpenPaymentDialog}
-              >
-                Record Payment
-              </Button>
-            )}
-          </Box>
-          
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} md={4}>
-              <TextField
-                label="Search by Student Name/ID"
-                fullWidth
-                variant="outlined"
-                size="small"
-              />
-            </Grid>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Typography variant="h4" gutterBottom>
+        Fee Management
+      </Typography>
+
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs 
+          value={tabValue} 
+          onChange={handleTabChange} 
+          aria-label="fee management tabs"
+          variant="scrollable"
+          scrollButtons="auto"
+        >
+          <Tab 
+            icon={<MenuBook />} 
+            label="Fee Structure" 
+            iconPosition="start"
+          />
+          <Tab 
+            icon={<ReceiptLong />} 
+            label="Fee Collection" 
+            iconPosition="start"
+          />
+          <Tab 
+            icon={<MonetizationOn />} 
+            label="Fee Dues" 
+            iconPosition="start"
+          />
+          <Tab 
+            icon={<BarChart />} 
+            label="Reports" 
+            iconPosition="start"
+          />
+        </Tabs>
+      </Box>
+
+      {/* Fee Structure Tab */}
+      <TabPanel value={tabValue} index={0}>
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={3}>
               <FormControl fullWidth size="small">
-                <InputLabel>Class</InputLabel>
-                <Select label="Class" value="">
-                  <MenuItem value="">All Classes</MenuItem>
-                  {classes.map((cls) => (
-                    <MenuItem key={cls} value={cls}>{cls}</MenuItem>
+                <InputLabel>Academic Year</InputLabel>
+                <Select
+                  value={academicYear}
+                  label="Academic Year"
+                  onChange={(e) => setAcademicYear(e.target.value)}
+                >
+                  {academicYears.map((year) => (
+                    <MenuItem key={year} value={year}>{year}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} md={3}>
               <FormControl fullWidth size="small">
-                <InputLabel>Payment Status</InputLabel>
-                <Select label="Payment Status" value="">
-                  <MenuItem value="">All Statuses</MenuItem>
-                  <MenuItem value="Paid">Paid</MenuItem>
-                  <MenuItem value="Pending">Pending</MenuItem>
+                <InputLabel>Class</InputLabel>
+                <Select
+                  value={selectedClass}
+                  label="Class"
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                >
+                  <MenuItem value="">All Classes</MenuItem>
+                  {classes.map((cls) => (
+                    <MenuItem key={cls} value={cls}>Class {cls}</MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={2}>
-              <Button variant="outlined" fullWidth>
-                Filter
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Search"
+                variant="outlined"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: <Search color="action" sx={{ mr: 1 }} />
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={3} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              {canManageFees && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<Add />}
+                  onClick={() => handleOpenStructureDialog()}
+                >
+                  Add Fee Structure
+                </Button>
+              )}
+            </Grid>
+          </Grid>
+        </Paper>
+
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Structure Name</TableCell>
+                <TableCell>Class</TableCell>
+                <TableCell>Academic Year</TableCell>
+                <TableCell>Total Amount</TableCell>
+                <TableCell>Installments</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredFeeStructures.map((structure) => (
+                <TableRow key={structure.id} hover>
+                  <TableCell>{structure.name}</TableCell>
+                  <TableCell>{structure.className}</TableCell>
+                  <TableCell>{structure.academicYear}</TableCell>
+                  <TableCell>{formatCurrency(structure.total)}</TableCell>
+                  <TableCell>{structure.installments}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={structure.isActive ? 'Active' : 'Inactive'}
+                      color={structure.isActive ? 'success' : 'default'}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <Tooltip title="View Details">
+                      <IconButton size="small" color="primary" onClick={() => handleOpenStructureDialog(structure)}>
+                        <Edit />
+                      </IconButton>
+                    </Tooltip>
+                    {canManageFees && (
+                      <Tooltip title="Delete">
+                        <IconButton size="small" color="error">
+                          <Delete />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredFeeStructures.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      No fee structures found for the selected criteria.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </TabPanel>
+
+      {/* Fee Collection Tab */}
+      <TabPanel value={tabValue} index={1}>
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Total Collected
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Receipt color="primary" sx={{ fontSize: 40, mr: 2 }} />
+                  <Typography variant="h4">
+                    {formatCurrency(totalCollected)}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Pending Dues
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Warning color="warning" sx={{ fontSize: 40, mr: 2 }} />
+                  <Typography variant="h4">
+                    {formatCurrency(totalDues)}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                {canCollectFees && (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<Payments />}
+                    onClick={() => handleOpenPaymentDialog()}
+                    sx={{ width: '100%', py: 1 }}
+                  >
+                    Collect New Payment
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Grid container spacing={3} alignItems="center">
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Academic Year</InputLabel>
+                <Select
+                  value={academicYear}
+                  label="Academic Year"
+                  onChange={(e) => setAcademicYear(e.target.value)}
+                >
+                  {academicYears.map((year) => (
+                    <MenuItem key={year} value={year}>{year}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Class</InputLabel>
+                <Select
+                  value={selectedClass}
+                  label="Class"
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                >
+                  <MenuItem value="">All Classes</MenuItem>
+                  {classes.map((cls) => (
+                    <MenuItem key={cls} value={cls}>Class {cls}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Search Student/Receipt"
+                variant="outlined"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: <Search color="action" sx={{ mr: 1 }} />
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={3} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<Print />}
+              >
+                Print
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<Download />}
+              >
+                Export
               </Button>
             </Grid>
           </Grid>
-          
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: 'primary.light' }}>
-                  <TableCell>Student ID</TableCell>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Class</TableCell>
-                  <TableCell>Fee Category</TableCell>
-                  <TableCell align="right">Amount (₹)</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="center">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {payments.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell>{payment.studentId}</TableCell>
-                    <TableCell>{payment.studentName}</TableCell>
-                    <TableCell>{payment.class}</TableCell>
-                    <TableCell>{payment.category}</TableCell>
-                    <TableCell align="right">₹{payment.amount.toLocaleString()}</TableCell>
-                    <TableCell>{payment.paymentDate || 'Not Paid'}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={payment.status} 
-                        color={payment.status === 'Paid' ? 'success' : 'warning'} 
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      {payment.status === 'Paid' ? (
-                        <IconButton color="primary" onClick={() => handleViewReceipt(payment)}>
-                          <ReceiptLong />
+        </Paper>
+
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Receipt No.</TableCell>
+                <TableCell>Date</TableCell>
+                <TableCell>Student</TableCell>
+                <TableCell>Class</TableCell>
+                <TableCell>Fee Type</TableCell>
+                <TableCell>Amount</TableCell>
+                <TableCell>Payment Method</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredFeePayments.map((payment) => (
+                <TableRow key={payment.id} hover>
+                  <TableCell>{payment.receiptNumber}</TableCell>
+                  <TableCell>{formatDate(payment.paymentDate)}</TableCell>
+                  <TableCell>
+                    <Tooltip title={`Admission No: ${payment.admissionNumber}`}>
+                      <span>{payment.studentName}</span>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell>{`${payment.className} ${payment.section}`}</TableCell>
+                  <TableCell>{payment.feeType}</TableCell>
+                  <TableCell>{formatCurrency(payment.amount)}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={payment.paymentMethod.replace('-', ' ').toUpperCase()}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {getStatusChip(payment.status)}
+                  </TableCell>
+                  <TableCell align="right">
+                    <Tooltip title="Print Receipt">
+                      <IconButton size="small" color="primary">
+                        <Print />
+                      </IconButton>
+                    </Tooltip>
+                    {canManageFees && (
+                      <Tooltip title="View/Edit">
+                        <IconButton size="small" color="primary">
+                          <Edit />
                         </IconButton>
-                      ) : (
-                        <Button 
-                          size="small" 
-                          variant="outlined" 
+                      </Tooltip>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredFeePayments.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      No payment records found for the selected criteria.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </TabPanel>
+
+      {/* Fee Dues Tab */}
+      <TabPanel value={tabValue} index={2}>
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Grid container spacing={3} alignItems="center">
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Class</InputLabel>
+                <Select
+                  value={selectedClass}
+                  label="Class"
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                >
+                  <MenuItem value="">All Classes</MenuItem>
+                  {classes.map((cls) => (
+                    <MenuItem key={cls} value={cls}>Class {cls}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Search Student"
+                variant="outlined"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: <Search color="action" sx={{ mr: 1 }} />
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<Print />}
+              >
+                Print
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<Download />}
+              >
+                Export
+              </Button>
+            </Grid>
+          </Grid>
+        </Paper>
+
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Student</TableCell>
+                <TableCell>Admission No.</TableCell>
+                <TableCell>Class</TableCell>
+                <TableCell>Total Fees</TableCell>
+                <TableCell>Paid</TableCell>
+                <TableCell>Due</TableCell>
+                <TableCell>Next Due Date</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredFeeStatus.map((status) => (
+                <TableRow key={status.studentId} hover>
+                  <TableCell>{status.studentName}</TableCell>
+                  <TableCell>{status.admissionNumber}</TableCell>
+                  <TableCell>{`${status.className} ${status.section}`}</TableCell>
+                  <TableCell>{formatCurrency(status.totalFees)}</TableCell>
+                  <TableCell>{formatCurrency(status.totalPaid)}</TableCell>
+                  <TableCell>{formatCurrency(status.totalDue)}</TableCell>
+                  <TableCell>{formatDate(status.nextDueDate)}</TableCell>
+                  <TableCell>
+                    {getStatusChip(status.status)}
+                  </TableCell>
+                  <TableCell align="right">
+                    {canCollectFees && (
+                      <Tooltip title="Collect Payment">
+                        <IconButton
+                          size="small"
                           color="primary"
-                          disabled={readOnly}
+                          onClick={() => handleOpenPaymentDialog(
+                            sampleStudents.find(student => student.id === status.studentId) || undefined
+                          )}
                         >
-                          Record Payment
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </TabPanel>
-        
-        {/* Fee Reports Tab */}
-        <TabPanel value={tabValue} index={2}>
-          <Typography variant="h6" gutterBottom>
-            Fee Collection Reports
-          </Typography>
-          
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Class-wise Fee Collection
-                  </Typography>
-                  <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Typography color="text.secondary">
-                      Chart will be displayed here
+                          <Payments />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Payment History">
+                      <IconButton size="small" color="primary">
+                        <History />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredFeeStatus.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      No student fee records found for the selected criteria.
                     </Typography>
-                  </Box>
-                </CardContent>
-                <Divider />
-                <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                  <Button startIcon={<Print />} variant="outlined">
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </TabPanel>
+
+      {/* Reports Tab */}
+      <TabPanel value={tabValue} index={3}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Fee Collection Summary
+                </Typography>
+                <Box sx={{ height: 300, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <Typography variant="body1" color="text.secondary">
+                    Fee collection chart will be displayed here
+                  </Typography>
+                </Box>
+                <List>
+                  <ListItem>
+                    <ListItemText primary="Total Collection" />
+                    <ListItemSecondaryAction>
+                      <Typography variant="body1" fontWeight="bold">
+                        {formatCurrency(totalCollected)}
+                      </Typography>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                  <Divider />
+                  <ListItem>
+                    <ListItemText primary="Total Pending" />
+                    <ListItemSecondaryAction>
+                      <Typography variant="body1" fontWeight="bold">
+                        {formatCurrency(totalDues)}
+                      </Typography>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                  <Divider />
+                  <ListItem>
+                    <ListItemText primary="Collection Rate" />
+                    <ListItemSecondaryAction>
+                      <Typography variant="body1" fontWeight="bold">
+                        {totalCollected + totalDues > 0 
+                          ? `${Math.round((totalCollected / (totalCollected + totalDues)) * 100)}%` 
+                          : '0%'}
+                      </Typography>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Collection by Payment Method
+                </Typography>
+                <Box sx={{ height: 300, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <Typography variant="body1" color="text.secondary">
+                    Payment method distribution chart will be displayed here
+                  </Typography>
+                </Box>
+                <List>
+                  {['cash', 'cheque', 'bank-transfer', 'online'].map(method => {
+                    const methodTotal = feePayments
+                      .filter(payment => 
+                        payment.academicYear === academicYear && 
+                        payment.paymentMethod === method &&
+                        payment.status === 'paid'
+                      )
+                      .reduce((sum, payment) => sum + payment.amount, 0);
+                    
+                    return (
+                      <React.Fragment key={method}>
+                        <ListItem>
+                          <ListItemText primary={method.replace('-', ' ').toUpperCase()} />
+                          <ListItemSecondaryAction>
+                            <Typography variant="body1" fontWeight="bold">
+                              {formatCurrency(methodTotal)}
+                            </Typography>
+                          </ListItemSecondaryAction>
+                        </ListItem>
+                        <Divider />
+                      </React.Fragment>
+                    );
+                  })}
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Typography variant="h6">
+                    Class-wise Collection Report
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<Print />}
+                  >
                     Print Report
                   </Button>
                 </Box>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Monthly Fee Collection
-                  </Typography>
-                  <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Typography color="text.secondary">
-                      Chart will be displayed here
-                    </Typography>
-                  </Box>
-                </CardContent>
-                <Divider />
-                <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                  <Button startIcon={<Print />} variant="outlined">
-                    Print Report
-                  </Button>
-                </Box>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Fee Collection Summary
-                  </Typography>
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Fee Category</TableCell>
-                          <TableCell align="right">Total Expected (₹)</TableCell>
-                          <TableCell align="right">Collected (₹)</TableCell>
-                          <TableCell align="right">Pending (₹)</TableCell>
-                          <TableCell align="right">Collection Rate</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell>Tuition Fee</TableCell>
-                          <TableCell align="right">₹36,000</TableCell>
-                          <TableCell align="right">₹22,000</TableCell>
-                          <TableCell align="right">₹14,000</TableCell>
-                          <TableCell align="right">61%</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Development Fee</TableCell>
-                          <TableCell align="right">₹18,000</TableCell>
-                          <TableCell align="right">₹11,000</TableCell>
-                          <TableCell align="right">₹7,000</TableCell>
-                          <TableCell align="right">61%</TableCell>
-                        </TableRow>
-                        <TableRow sx={{ fontWeight: 'bold' }}>
-                          <TableCell><strong>Total</strong></TableCell>
-                          <TableCell align="right"><strong>₹54,000</strong></TableCell>
-                          <TableCell align="right"><strong>₹33,000</strong></TableCell>
-                          <TableCell align="right"><strong>₹21,000</strong></TableCell>
-                          <TableCell align="right"><strong>61%</strong></TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </CardContent>
-                <Divider />
-                <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                  <Button startIcon={<ViewList />} variant="outlined" sx={{ mr: 1 }}>
-                    Detailed Report
-                  </Button>
-                  <Button startIcon={<Print />} variant="outlined">
-                    Print Summary
-                  </Button>
-                </Box>
-              </Card>
-            </Grid>
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Class</TableCell>
+                        <TableCell align="right">Total Fees</TableCell>
+                        <TableCell align="right">Collected</TableCell>
+                        <TableCell align="right">Pending</TableCell>
+                        <TableCell align="right">Collection %</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {classes.map(cls => {
+                        // Calculate class totals
+                        const classStudents = feeStatus.filter(status => 
+                          status.className === `Class ${cls}`
+                        );
+                        
+                        const totalFees = classStudents.reduce(
+                          (sum, status) => sum + status.totalFees, 0
+                        );
+                        
+                        const totalPaid = classStudents.reduce(
+                          (sum, status) => sum + status.totalPaid, 0
+                        );
+                        
+                        const totalDue = classStudents.reduce(
+                          (sum, status) => sum + status.totalDue, 0
+                        );
+                        
+                        const collectionRate = totalFees > 0 
+                          ? Math.round((totalPaid / totalFees) * 100) 
+                          : 0;
+                        
+                        return (
+                          <TableRow key={cls} hover>
+                            <TableCell>Class {cls}</TableCell>
+                            <TableCell align="right">{formatCurrency(totalFees)}</TableCell>
+                            <TableCell align="right">{formatCurrency(totalPaid)}</TableCell>
+                            <TableCell align="right">{formatCurrency(totalDue)}</TableCell>
+                            <TableCell align="right">{collectionRate}%</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
           </Grid>
-        </TabPanel>
-        
-        {/* Fee Statistics Tab */}
-        <TabPanel value={tabValue} index={3}>
-          <Typography variant="h6" gutterBottom>
-            Fee Statistics and Analytics
-          </Typography>
-          
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Total Fee Collected (Current Year)
-                  </Typography>
-                  <Typography variant="h4" color="primary">
-                    ₹33,000
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Pending Fee Amount
-                  </Typography>
-                  <Typography variant="h4" color="error">
-                    ₹21,000
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Collection Rate
-                  </Typography>
-                  <Typography variant="h4" color={61 > 70 ? 'success' : 'warning'}>
-                    61%
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Alert severity="info">
-                Detailed fee statistics and analytics will be added in the next update.
-              </Alert>
-            </Grid>
-          </Grid>
-        </TabPanel>
-      </Paper>
-      
-      {/* Add New Fee Dialog */}
-      <Dialog open={isNewFeeDialogOpen} onClose={handleCloseNewFeeDialog}>
-        <DialogTitle>Add New Fee Structure</DialogTitle>
+        </Grid>
+      </TabPanel>
+
+      {/* Add/Edit Fee Structure Dialog */}
+      <Dialog open={openStructureDialog} onClose={handleCloseStructureDialog} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {selectedStructure ? 'Edit Fee Structure' : 'Add New Fee Structure'}
+        </DialogTitle>
         <DialogContent>
-          <Box component="form" sx={{ mt: 2 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel>Class</InputLabel>
-                  <Select
-                    name="class"
-                    value={newFee.class}
-                    label="Class"
-                    onChange={handleNewFeeSelectChange}
-                  >
-                    {classes.map((cls) => (
-                      <MenuItem key={cls} value={cls}>{cls}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel>Fee Category</InputLabel>
-                  <Select
-                    name="category"
-                    value={newFee.category}
-                    label="Fee Category"
-                    onChange={handleNewFeeSelectChange}
-                  >
-                    {feeCategories.map((category) => (
-                      <MenuItem key={category} value={category}>{category}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <TextField
-                  name="amount"
-                  label="Amount"
-                  type="number"
-                  fullWidth
-                  value={newFee.amount}
-                  onChange={handleNewFeeTextChange}
-                  InputProps={{
-                    startAdornment: <CurrencyRupee fontSize="small" />
-                  }}
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel>Frequency</InputLabel>
-                  <Select
-                    name="frequency"
-                    value={newFee.frequency}
-                    label="Frequency"
-                    onChange={handleNewFeeSelectChange}
-                  >
-                    {frequencies.map((freq) => (
-                      <MenuItem key={freq} value={freq}>{freq}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <TextField
-                  name="dueDay"
-                  label="Due Day of Month"
-                  type="number"
-                  fullWidth
-                  value={newFee.dueDay}
-                  onChange={handleNewFeeTextChange}
-                  inputProps={{ min: 1, max: 31 }}
-                />
-              </Grid>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Structure Name"
+                variant="outlined"
+                defaultValue={selectedStructure?.name || ''}
+              />
             </Grid>
-          </Box>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Academic Year</InputLabel>
+                <Select
+                  label="Academic Year"
+                  defaultValue={selectedStructure?.academicYear || academicYear}
+                >
+                  {academicYears.map((year) => (
+                    <MenuItem key={year} value={year}>{year}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Class</InputLabel>
+                <Select
+                  label="Class"
+                  defaultValue={selectedStructure?.classId || ''}
+                >
+                  {classes.map((cls) => (
+                    <MenuItem key={cls} value={cls}>Class {cls}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Total Amount"
+                type="number"
+                variant="outlined"
+                defaultValue={selectedStructure?.total || 0}
+                InputProps={{
+                  readOnly: true,
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Number of Installments"
+                type="number"
+                variant="outlined"
+                defaultValue={selectedStructure?.installments || 4}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  label="Status"
+                  defaultValue={selectedStructure?.isActive ? "true" : "false"}
+                >
+                  <MenuItem value="true">Active</MenuItem>
+                  <MenuItem value="false">Inactive</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                Fee Components
+              </Typography>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Component Name</TableCell>
+                      <TableCell>Amount</TableCell>
+                      <TableCell>Frequency</TableCell>
+                      <TableCell align="right">Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {selectedStructure?.components.map((component, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            defaultValue={component.name}
+                            variant="standard"
+                            fullWidth
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            type="number"
+                            defaultValue={component.amount}
+                            variant="standard"
+                            fullWidth
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <FormControl fullWidth size="small" variant="standard">
+                            <Select
+                              defaultValue={component.frequency}
+                            >
+                              <MenuItem value="one-time">One Time</MenuItem>
+                              <MenuItem value="monthly">Monthly</MenuItem>
+                              <MenuItem value="quarterly">Quarterly</MenuItem>
+                              <MenuItem value="half-yearly">Half Yearly</MenuItem>
+                              <MenuItem value="yearly">Yearly</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </TableCell>
+                        <TableCell align="right">
+                          <IconButton size="small" color="error">
+                            <Delete />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {!selectedStructure && (
+                      <TableRow>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            placeholder="e.g., Tuition Fee"
+                            variant="standard"
+                            fullWidth
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            type="number"
+                            placeholder="0"
+                            variant="standard"
+                            fullWidth
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <FormControl fullWidth size="small" variant="standard">
+                            <Select
+                              defaultValue="yearly"
+                            >
+                              <MenuItem value="one-time">One Time</MenuItem>
+                              <MenuItem value="monthly">Monthly</MenuItem>
+                              <MenuItem value="quarterly">Quarterly</MenuItem>
+                              <MenuItem value="half-yearly">Half Yearly</MenuItem>
+                              <MenuItem value="yearly">Yearly</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </TableCell>
+                        <TableCell align="right">
+                          <IconButton size="small" color="error">
+                            <Delete />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Button
+                startIcon={<Add />}
+                sx={{ mt: 2 }}
+              >
+                Add Component
+              </Button>
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseNewFeeDialog}>Cancel</Button>
-          <Button 
-            onClick={handleAddNewFee}
-            disabled={!newFee.class || !newFee.category || newFee.amount <= 0}
-            variant="contained"
-          >
-            Add Fee
+          <Button onClick={handleCloseStructureDialog}>Cancel</Button>
+          <Button onClick={handleSaveStructure} variant="contained" color="primary">
+            {selectedStructure ? 'Update' : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
-      
-      {/* Record Payment Dialog */}
-      <Dialog open={isDialogOpen} onClose={handleClosePaymentDialog}>
+
+      {/* Add Payment Dialog */}
+      <Dialog open={openPaymentDialog} onClose={handleClosePaymentDialog} maxWidth="md" fullWidth>
         <DialogTitle>Record New Payment</DialogTitle>
         <DialogContent>
-          <Box component="form" sx={{ mt: 2 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  name="studentId"
-                  label="Student ID"
-                  fullWidth
-                  value={newPayment.studentId}
-                  onChange={handlePaymentTextChange}
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  name="studentName"
-                  label="Student Name"
-                  fullWidth
-                  value={newPayment.studentName}
-                  onChange={handlePaymentTextChange}
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Class</InputLabel>
-                  <Select
-                    name="class"
-                    value={newPayment.class}
-                    label="Class"
-                    onChange={handlePaymentSelectChange}
-                  >
-                    {classes.map((cls) => (
-                      <MenuItem key={cls} value={cls}>{cls}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Fee Category</InputLabel>
-                  <Select
-                    name="category"
-                    value={newPayment.category}
-                    label="Fee Category"
-                    onChange={handlePaymentSelectChange}
-                  >
-                    {feeCategories.map((category) => (
-                      <MenuItem key={category} value={category}>{category}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  name="amount"
-                  label="Amount"
-                  type="number"
-                  fullWidth
-                  value={newPayment.amount}
-                  onChange={handlePaymentTextChange}
-                  InputProps={{
-                    startAdornment: <CurrencyRupee fontSize="small" />
-                  }}
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  name="paymentDate"
-                  label="Payment Date"
-                  type="date"
-                  fullWidth
-                  value={newPayment.paymentDate}
-                  onChange={handlePaymentTextChange}
-                  InputLabelProps={{
-                    shrink: true,
-                  }}
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel>Payment Mode</InputLabel>
-                  <Select
-                    name="paymentMode"
-                    value={newPayment.paymentMode}
-                    label="Payment Mode"
-                    onChange={handlePaymentSelectChange}
-                  >
-                    {paymentModes.map((mode) => (
-                      <MenuItem key={mode} value={mode}>{mode}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <Autocomplete
+                options={sampleStudents}
+                getOptionLabel={(option) => `${option.name} (${option.admissionNumber})`}
+                defaultValue={selectedStudent}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Select Student"
+                    variant="outlined"
+                    placeholder="Search by name or admission number"
+                  />
+                )}
+              />
             </Grid>
-          </Box>
+            
+            {selectedStudent && (
+              <>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Class"
+                    variant="outlined"
+                    value={`Class ${selectedStudent.class} ${selectedStudent.section}`}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Fee Type</InputLabel>
+                    <Select
+                      label="Fee Type"
+                      defaultValue=""
+                    >
+                      <MenuItem value="tuition-q1">Tuition Fee - Q1</MenuItem>
+                      <MenuItem value="tuition-q2">Tuition Fee - Q2</MenuItem>
+                      <MenuItem value="tuition-q3">Tuition Fee - Q3</MenuItem>
+                      <MenuItem value="tuition-q4">Tuition Fee - Q4</MenuItem>
+                      <MenuItem value="development">Development Fee</MenuItem>
+                      <MenuItem value="exam">Examination Fee</MenuItem>
+                      <MenuItem value="other">Other Fees</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </>
+            )}
+            
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Amount"
+                type="number"
+                variant="outlined"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  label="Payment Date"
+                  defaultValue={new Date()}
+                  sx={{ width: '100%' }}
+                />
+              </LocalizationProvider>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Payment Method</InputLabel>
+                <Select
+                  label="Payment Method"
+                  defaultValue="cash"
+                >
+                  <MenuItem value="cash">Cash</MenuItem>
+                  <MenuItem value="cheque">Cheque</MenuItem>
+                  <MenuItem value="bank-transfer">Bank Transfer</MenuItem>
+                  <MenuItem value="online">Online Payment</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Receipt Number"
+                variant="outlined"
+                defaultValue={`REC${new Date().getFullYear()}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description/Notes"
+                variant="outlined"
+                multiline
+                rows={3}
+              />
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClosePaymentDialog}>Cancel</Button>
           <Button 
-            onClick={handleAddPayment}
-            disabled={!newPayment.studentId || !newPayment.studentName || !newPayment.class || !newPayment.category || newPayment.amount <= 0 || !newPayment.paymentDate || !newPayment.paymentMode}
-            variant="contained"
+            onClick={handleSavePayment} 
+            variant="contained" 
+            color="primary"
+            disabled={!selectedStudent}
           >
             Record Payment
           </Button>
         </DialogActions>
       </Dialog>
-      
-      {/* Receipt Dialog */}
-      <Dialog open={isReceiptDialogOpen} onClose={handleCloseReceiptDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">Fee Receipt</Typography>
-            <IconButton onClick={handlePrintReceipt}>
-              <Print />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          {selectedReceipt && (
-            <Box sx={{ border: '1px dashed grey', p: 2 }}>
-              <Box sx={{ textAlign: 'center', mb: 2 }}>
-                <Typography variant="h5">SCHOOL ERP SYSTEM</Typography>
-                <Typography variant="body2">123 Education Street, Knowledge City</Typography>
-                <Typography variant="body2">Tel: 123-456-7890</Typography>
-                <Typography variant="h6" sx={{ mt: 2, textDecoration: 'underline' }}>FEE RECEIPT</Typography>
-              </Box>
-              
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Typography variant="body2"><strong>Receipt No:</strong> {selectedReceipt.receiptNo}</Typography>
-                </Grid>
-                <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                  <Typography variant="body2"><strong>Date:</strong> {selectedReceipt.paymentDate}</Typography>
-                </Grid>
-              </Grid>
-              
-              <Box sx={{ my: 2 }}>
-                <Typography><strong>Student ID:</strong> {selectedReceipt.studentId}</Typography>
-                <Typography><strong>Name:</strong> {selectedReceipt.studentName}</Typography>
-                <Typography><strong>Class:</strong> {selectedReceipt.class}</Typography>
-              </Box>
-              
-              <TableContainer component={Paper} sx={{ mb: 2 }}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Fee Description</TableCell>
-                      <TableCell align="right">Amount</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>{selectedReceipt.category}</TableCell>
-                      <TableCell align="right">₹{selectedReceipt.amount.toLocaleString()}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><strong>Total</strong></TableCell>
-                      <TableCell align="right"><strong>₹{selectedReceipt.amount.toLocaleString()}</strong></TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              
-              <Box sx={{ mb: 2 }}>
-                <Typography><strong>Payment Mode:</strong> {selectedReceipt.paymentMode}</Typography>
-                <Typography><strong>Amount in words:</strong> {convertToWords(selectedReceipt.amount)} Rupees Only</Typography>
-              </Box>
-              
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-                <Box>
-                  <Typography variant="body2">Receiver's Signature</Typography>
-                </Box>
-                <Box sx={{ textAlign: 'right' }}>
-                  <Typography variant="body2">Authorized Signature</Typography>
-                </Box>
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseReceiptDialog}>Close</Button>
-        </DialogActions>
-      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
-
-// Helper function to get the suffix for day numbers (1st, 2nd, 3rd, etc.)
-function getDaySuffix(day: number): string {
-  if (day >= 11 && day <= 13) {
-    return 'th';
-  }
-  switch (day % 10) {
-    case 1:
-      return 'st';
-    case 2:
-      return 'nd';
-    case 3:
-      return 'rd';
-    default:
-      return 'th';
-  }
-}
-
-// Helper function to convert number to words (simple implementation)
-function convertToWords(amount: number): string {
-  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-  
-  if (amount === 0) return 'Zero';
-  
-  function convertLessThanThousand(n: number): string {
-    if (n === 0) return '';
-    else if (n < 20) return ones[n] + ' ';
-    else if (n < 100) return tens[Math.floor(n / 10)] + ' ' + convertLessThanThousand(n % 10);
-    else return ones[Math.floor(n / 100)] + ' Hundred ' + convertLessThanThousand(n % 100);
-  }
-  
-  let result = '';
-  if (amount >= 100000) {
-    result += convertLessThanThousand(Math.floor(amount / 100000)) + 'Lakh ';
-    amount %= 100000;
-  }
-  
-  if (amount >= 1000) {
-    result += convertLessThanThousand(Math.floor(amount / 1000)) + 'Thousand ';
-    amount %= 1000;
-  }
-  
-  result += convertLessThanThousand(amount);
-  return result.trim();
-}
 
 export default FeesManagement;

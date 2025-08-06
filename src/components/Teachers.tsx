@@ -1,440 +1,587 @@
 import React, { useState } from 'react';
 import {
-  Box,
+  Container,
   Typography,
-  TextField,
-  Grid,
-  Button,
   Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
+  Box,
+  IconButton,
+  Tabs,
+  Tab,
+  Grid,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Divider,
-  Container,
-  SelectChangeEvent,
+  Avatar,
+  Card,
+  CardContent,
   Chip,
-  FormControlLabel,
-  Switch,
-  InputAdornment
+  Divider
 } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { Save, Clear, Phone, Email, Home, School } from '@mui/icons-material';
+import { Edit, Delete, Add, Search, FilterList, Phone, Email } from '@mui/icons-material';
+import { useAuth } from '../context/useAuth';
 
-// Define interfaces for form data
-interface TeacherFormData {
-  teacherName: string;
-  employeeId: string;
-  department: string;
-  designation: string;
-  dateOfJoining: Date | null;
-  qualification: string;
-  email: string;
-  phoneNumber: string;
-  address: string;
-  subjects: string[];
-  classTeacherFor: string;
-  isActive: boolean;
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
 }
 
-interface TeachersProps {
-  readOnly?: boolean;
-}
-
-const Teachers: React.FC<TeachersProps> = ({ readOnly = false }) => {
-  // Initial form state
-  const initialFormState: TeacherFormData = {
-    teacherName: '',
-    employeeId: '',
-    department: '',
-    designation: '',
-    dateOfJoining: null,
-    qualification: '',
-    email: '',
-    phoneNumber: '',
-    address: '',
-    subjects: [],
-    classTeacherFor: '',
-    isActive: true
-  };
-
-  // State for form data
-  const [formData, setFormData] = useState<TeacherFormData>(initialFormState);
-
-  // Department options
-  const departments = ['English', 'Mathematics', 'Science', 'Social Studies', 'Computer Science', 'Arts', 'Physical Education'];
-  
-  // Designation options
-  const designations = ['Junior Teacher', 'Senior Teacher', 'Head of Department', 'Vice Principal', 'Principal'];
-
-  // Subject options
-  const subjectOptions = [
-    'English Language', 'English Literature', 'Mathematics', 'Physics', 'Chemistry', 
-    'Biology', 'History', 'Geography', 'Computer Science', 'Physical Education', 
-    'Arts', 'Music', 'Economics', 'Business Studies'
-  ];
-
-  // Handle input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-  };
-
-  // Handle select changes
-  const handleSelectChange = (e: SelectChangeEvent) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-  };
-
-  // Handle subjects multi-select
-  const handleSubjectsChange = (e: SelectChangeEvent<string[]>) => {
-    const { value } = e.target;
-    setFormData({
-      ...formData,
-      subjects: typeof value === 'string' ? value.split(',') : value,
-    });
-  };
-
-  // Handle switch changes
-  const handleSwitchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: checked,
-    });
-  };
-
-  // Handle date change
-  const handleDateChange = (date: Date | null) => {
-    setFormData({
-      ...formData,
-      dateOfJoining: date,
-    });
-  };
-
-  // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Form Data:', formData);
-    // Here you would typically send the data to an API
-    alert('Teacher information saved successfully!');
-  };
-
-  // Handle form reset
-  const handleReset = () => {
-    setFormData(initialFormState);
-  };
-
-  // Create common input props
-  const getInputProps = () => ({
-    InputProps: {
-      readOnly: readOnly,
-      sx: readOnly ? { bgcolor: 'action.hover' } : {}
-    },
-    disabled: readOnly
-  });
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
-          Teacher Information Form
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`teacher-tabpanel-${index}`}
+      aria-labelledby={`teacher-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
+
+interface Teacher {
+  id: string;
+  name: string;
+  employeeId: string;
+  gender: string;
+  dateOfJoining: string;
+  qualification: string;
+  specialization: string;
+  contactNumber: string;
+  email: string;
+  address: string;
+  status: 'active' | 'inactive';
+  subjects: string[];
+  classes: string[];
+}
+
+// Sample teacher data
+const sampleTeachers: Teacher[] = [
+  {
+    id: '1',
+    name: 'Dr. Robert Miller',
+    employeeId: 'TCH001',
+    gender: 'Male',
+    dateOfJoining: '2018-07-15',
+    qualification: 'Ph.D. in Physics',
+    specialization: 'Quantum Mechanics',
+    contactNumber: '555-123-4567',
+    email: 'robert.miller@example.com',
+    address: '123 Main St, Anytown',
+    status: 'active',
+    subjects: ['Physics', 'Mathematics'],
+    classes: ['11', '12']
+  },
+  {
+    id: '2',
+    name: 'Ms. Sarah Johnson',
+    employeeId: 'TCH002',
+    gender: 'Female',
+    dateOfJoining: '2019-04-20',
+    qualification: 'M.A. in English Literature',
+    specialization: 'Modern Literature',
+    contactNumber: '555-987-6543',
+    email: 'sarah.johnson@example.com',
+    address: '456 Oak Ave, Anytown',
+    status: 'active',
+    subjects: ['English', 'Literature'],
+    classes: ['9', '10', '11']
+  },
+  {
+    id: '3',
+    name: 'Prof. Amit Sharma',
+    employeeId: 'TCH003',
+    gender: 'Male',
+    dateOfJoining: '2017-06-10',
+    qualification: 'M.Sc. in Chemistry',
+    specialization: 'Organic Chemistry',
+    contactNumber: '555-456-7890',
+    email: 'amit.sharma@example.com',
+    address: '789 Maple Dr, Anytown',
+    status: 'active',
+    subjects: ['Chemistry', 'Environmental Science'],
+    classes: ['10', '11', '12']
+  },
+  {
+    id: '4',
+    name: 'Mrs. Lisa Wang',
+    employeeId: 'TCH004',
+    gender: 'Female',
+    dateOfJoining: '2020-08-15',
+    qualification: 'M.Ed. in Mathematics',
+    specialization: 'Calculus',
+    contactNumber: '555-789-0123',
+    email: 'lisa.wang@example.com',
+    address: '101 Pine St, Anytown',
+    status: 'active',
+    subjects: ['Mathematics', 'Statistics'],
+    classes: ['9', '10']
+  },
+  {
+    id: '5',
+    name: 'Mr. James Wilson',
+    employeeId: 'TCH005',
+    gender: 'Male',
+    dateOfJoining: '2016-05-20',
+    qualification: 'B.Ed. in History',
+    specialization: 'World History',
+    contactNumber: '555-234-5678',
+    email: 'james.wilson@example.com',
+    address: '202 Cedar Lane, Anytown',
+    status: 'inactive',
+    subjects: ['History', 'Social Studies'],
+    classes: ['8', '9']
+  }
+];
+
+const Teachers: React.FC = () => {
+  const { user, checkPermission } = useAuth();
+  const [teachers, setTeachers] = useState<Teacher[]>(sampleTeachers);
+  const [tabValue, setTabValue] = useState(0);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterSubject, setFilterSubject] = useState('');
+
+  // Check permissions
+  const canManageTeachers = user?.role === 'admin' || checkPermission('manage_teachers');
+  const canViewTeachers = canManageTeachers || checkPermission('view_teachers');
+
+  // Get all unique subjects
+  const allSubjects = Array.from(
+    new Set(teachers.flatMap(teacher => teacher.subjects))
+  ).sort();
+
+  // Handle tab change
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
+  // Handle dialog open/close
+  const handleOpenDialog = (teacher?: Teacher) => {
+    if (teacher) {
+      setSelectedTeacher(teacher);
+    } else {
+      setSelectedTeacher(null);
+    }
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+  };
+
+  // Handle teacher form submit
+  const handleSaveTeacher = () => {
+    // In a real app, we would save the teacher data
+    // and then update the state
+
+    // For demo purposes, just close the dialog
+    handleCloseDialog();
+  };
+
+  // Handle teacher deletion
+  const handleDeleteTeacher = (id: string) => {
+    // In a real app, we would confirm deletion first
+    setTeachers(teachers.filter(teacher => teacher.id !== id));
+  };
+
+  // Apply filters
+  const filteredTeachers = teachers
+    .filter(teacher => 
+      (teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       teacher.employeeId.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (filterSubject ? teacher.subjects.includes(filterSubject) : true)
+    );
+
+  // Get active and inactive teachers
+  const activeTeachers = filteredTeachers.filter(teacher => teacher.status === 'active');
+  const inactiveTeachers = filteredTeachers.filter(teacher => teacher.status === 'inactive');
+
+  if (!canViewTeachers) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Typography variant="h4" color="error">
+          You do not have permission to view this page.
         </Typography>
+      </Container>
+    );
+  }
 
-        {readOnly && (
-          <Paper 
-            elevation={0} 
-            sx={{ 
-              bgcolor: 'info.light', 
-              color: 'info.contrastText', 
-              p: 2, 
-              mb: 3,
-              borderRadius: 1
-            }}
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Teacher Management
+        </Typography>
+        {canManageTeachers && (
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<Add />}
+            onClick={() => handleOpenDialog()}
           >
-            <Typography>
-              You are in view-only mode. As a student or teacher, you can only view this information but cannot edit it.
-            </Typography>
-          </Paper>
+            Add New Teacher
+          </Button>
         )}
+      </Box>
 
-        <Box component="form" onSubmit={handleSubmit}>
-          {/* Teacher Basic Information */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-            Basic Information
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                required
-                label="Teacher Name"
-                name="teacherName"
-                value={formData.teacherName}
-                onChange={handleInputChange}
-                {...getInputProps()}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                required
-                label="Employee ID"
-                name="employeeId"
-                value={formData.employeeId}
-                onChange={handleInputChange}
-                {...getInputProps()}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth disabled={readOnly}>
-                <InputLabel>Department</InputLabel>
-                <Select
-                  name="department"
-                  value={formData.department}
-                  label="Department"
-                  onChange={handleSelectChange}
-                  inputProps={{
-                    readOnly: readOnly
-                  }}
-                >
-                  {departments.map((dept) => (
-                    <MenuItem key={dept} value={dept}>
-                      {dept}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth disabled={readOnly}>
-                <InputLabel>Designation</InputLabel>
-                <Select
-                  name="designation"
-                  value={formData.designation}
-                  label="Designation"
-                  onChange={handleSelectChange}
-                  inputProps={{
-                    readOnly: readOnly
-                  }}
-                >
-                  {designations.map((designation) => (
-                    <MenuItem key={designation} value={designation}>
-                      {designation}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Date of Joining"
-                  value={formData.dateOfJoining}
-                  onChange={handleDateChange}
-                  slotProps={{ 
-                    textField: { 
-                      fullWidth: true,
-                      ...getInputProps()
-                    } 
-                  }}
-                />
-              </LocalizationProvider>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Qualification"
-                name="qualification"
-                value={formData.qualification}
-                onChange={handleInputChange}
-                placeholder="e.g., M.Sc., B.Ed."
-                {...getInputProps()}
-              />
-            </Grid>
+      {/* Search and Filter Section */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              label="Search by Name or Employee ID"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: <Search color="action" sx={{ mr: 1 }} />
+              }}
+              size="small"
+            />
           </Grid>
-
-          {/* Contact Information */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-            Contact Information
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                required
-                label="Email Address"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                InputProps={{
-                  readOnly: readOnly,
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Email color="action" />
-                    </InputAdornment>
-                  ),
-                  sx: readOnly ? { bgcolor: 'action.hover' } : {}
-                }}
-                disabled={readOnly}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                required
-                label="Phone Number"
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleInputChange}
-                InputProps={{
-                  readOnly: readOnly,
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Phone color="action" />
-                    </InputAdornment>
-                  ),
-                  sx: readOnly ? { bgcolor: 'action.hover' } : {}
-                }}
-                disabled={readOnly}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                required
-                label="Residential Address"
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-                multiline
-                rows={3}
-                InputProps={{
-                  readOnly: readOnly,
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Home color="action" />
-                    </InputAdornment>
-                  ),
-                  sx: readOnly ? { bgcolor: 'action.hover' } : {}
-                }}
-                disabled={readOnly}
-              />
-            </Grid>
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Filter by Subject</InputLabel>
+              <Select
+                value={filterSubject}
+                label="Filter by Subject"
+                onChange={(e) => setFilterSubject(e.target.value)}
+              >
+                <MenuItem value="">
+                  <em>All Subjects</em>
+                </MenuItem>
+                {allSubjects.map((subject) => (
+                  <MenuItem key={subject} value={subject}>{subject}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
+          <Grid item xs={12} md={2}>
+            <Button 
+              variant="outlined" 
+              startIcon={<FilterList />}
+              fullWidth
+              onClick={() => {
+                setFilterSubject('');
+                setSearchTerm('');
+              }}
+            >
+              Clear
+            </Button>
+          </Grid>
+        </Grid>
+      </Paper>
 
-          {/* Teaching Information */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-            Teaching Information
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs value={tabValue} onChange={handleTabChange} aria-label="teacher tabs">
+          <Tab label={`Active Teachers (${activeTeachers.length})`} />
+          <Tab label={`Inactive Teachers (${inactiveTeachers.length})`} />
+          <Tab label="Teacher Details" />
+        </Tabs>
+      </Box>
 
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <FormControl fullWidth disabled={readOnly}>
-                <InputLabel>Subjects Taught</InputLabel>
-                <Select
-                  multiple
-                  name="subjects"
-                  value={formData.subjects}
-                  label="Subjects Taught"
-                  onChange={handleSubjectsChange}
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={value} />
-                      ))}
+      {/* Tab Panels */}
+      <TabPanel value={tabValue} index={0}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>Employee ID</TableCell>
+                <TableCell>Qualification</TableCell>
+                <TableCell>Subjects</TableCell>
+                <TableCell>Classes</TableCell>
+                <TableCell>Contact</TableCell>
+                {canManageTeachers && <TableCell align="right">Actions</TableCell>}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {activeTeachers.map((teacher) => (
+                <TableRow key={teacher.id} hover>
+                  <TableCell>{teacher.name}</TableCell>
+                  <TableCell>{teacher.employeeId}</TableCell>
+                  <TableCell>{teacher.qualification}</TableCell>
+                  <TableCell>
+                    {teacher.subjects.map((subject, index) => (
+                      <Chip 
+                        key={index} 
+                        label={subject} 
+                        size="small" 
+                        sx={{ mr: 0.5, mb: 0.5 }} 
+                      />
+                    ))}
+                  </TableCell>
+                  <TableCell>
+                    {teacher.classes.map((cls, index) => (
+                      <Chip 
+                        key={index} 
+                        label={`Class ${cls}`} 
+                        size="small" 
+                        variant="outlined"
+                        sx={{ mr: 0.5, mb: 0.5 }} 
+                      />
+                    ))}
+                  </TableCell>
+                  <TableCell>
+                    <IconButton size="small" color="primary">
+                      <Phone fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" color="primary">
+                      <Email fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                  {canManageTeachers && (
+                    <TableCell align="right">
+                      <IconButton color="primary" onClick={() => handleOpenDialog(teacher)}>
+                        <Edit />
+                      </IconButton>
+                      <IconButton color="error" onClick={() => handleDeleteTeacher(teacher.id)}>
+                        <Delete />
+                      </IconButton>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={1}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>Employee ID</TableCell>
+                <TableCell>Qualification</TableCell>
+                <TableCell>Subjects</TableCell>
+                <TableCell>Classes</TableCell>
+                <TableCell>Contact</TableCell>
+                {canManageTeachers && <TableCell align="right">Actions</TableCell>}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {inactiveTeachers.map((teacher) => (
+                <TableRow key={teacher.id} hover sx={{ bgcolor: 'rgba(0, 0, 0, 0.05)' }}>
+                  <TableCell>{teacher.name}</TableCell>
+                  <TableCell>{teacher.employeeId}</TableCell>
+                  <TableCell>{teacher.qualification}</TableCell>
+                  <TableCell>
+                    {teacher.subjects.map((subject, index) => (
+                      <Chip 
+                        key={index} 
+                        label={subject} 
+                        size="small" 
+                        sx={{ mr: 0.5, mb: 0.5 }} 
+                      />
+                    ))}
+                  </TableCell>
+                  <TableCell>
+                    {teacher.classes.map((cls, index) => (
+                      <Chip 
+                        key={index} 
+                        label={`Class ${cls}`} 
+                        size="small" 
+                        variant="outlined"
+                        sx={{ mr: 0.5, mb: 0.5 }} 
+                      />
+                    ))}
+                  </TableCell>
+                  <TableCell>
+                    <IconButton size="small" color="primary">
+                      <Phone fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" color="primary">
+                      <Email fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                  {canManageTeachers && (
+                    <TableCell align="right">
+                      <IconButton color="primary" onClick={() => handleOpenDialog(teacher)}>
+                        <Edit />
+                      </IconButton>
+                      <IconButton color="error" onClick={() => handleDeleteTeacher(teacher.id)}>
+                        <Delete />
+                      </IconButton>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={2}>
+        <Grid container spacing={3}>
+          {filteredTeachers.map((teacher) => (
+            <Grid item xs={12} md={6} key={teacher.id}>
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+                      {teacher.name.charAt(0)}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h6">{teacher.name}</Typography>
+                      <Chip 
+                        label={teacher.status === 'active' ? 'Active' : 'Inactive'} 
+                        color={teacher.status === 'active' ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </Box>
+                  </Box>
+                  
+                  <Divider sx={{ my: 1 }} />
+                  
+                  <Grid container spacing={1}>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">Employee ID:</Typography>
+                      <Typography variant="body1">{teacher.employeeId}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">Date of Joining:</Typography>
+                      <Typography variant="body1">{teacher.dateOfJoining}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">Qualification:</Typography>
+                      <Typography variant="body1">{teacher.qualification}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">Specialization:</Typography>
+                      <Typography variant="body1">{teacher.specialization}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">Subjects:</Typography>
+                      <Box sx={{ mt: 0.5 }}>
+                        {teacher.subjects.map((subject, index) => (
+                          <Chip 
+                            key={index} 
+                            label={subject} 
+                            size="small" 
+                            sx={{ mr: 0.5, mb: 0.5 }} 
+                          />
+                        ))}
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">Classes:</Typography>
+                      <Box sx={{ mt: 0.5 }}>
+                        {teacher.classes.map((cls, index) => (
+                          <Chip 
+                            key={index} 
+                            label={`Class ${cls}`} 
+                            size="small" 
+                            variant="outlined"
+                            sx={{ mr: 0.5, mb: 0.5 }} 
+                          />
+                        ))}
+                      </Box>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">Contact:</Typography>
+                      <Typography variant="body1">{teacher.contactNumber}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">Email:</Typography>
+                      <Typography variant="body1">{teacher.email}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">Address:</Typography>
+                      <Typography variant="body1">{teacher.address}</Typography>
+                    </Grid>
+                  </Grid>
+                  
+                  {canManageTeachers && (
+                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                      <Button 
+                        size="small" 
+                        variant="outlined" 
+                        startIcon={<Edit />}
+                        onClick={() => handleOpenDialog(teacher)}
+                        sx={{ mr: 1 }}
+                      >
+                        Edit
+                      </Button>
+                      <Button 
+                        size="small" 
+                        variant="outlined" 
+                        color="error" 
+                        startIcon={<Delete />}
+                        onClick={() => handleDeleteTeacher(teacher.id)}
+                      >
+                        Delete
+                      </Button>
                     </Box>
                   )}
-                  inputProps={{
-                    readOnly: readOnly
-                  }}
-                >
-                  {subjectOptions.map((subject) => (
-                    <MenuItem key={subject} value={subject}>
-                      {subject}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </TabPanel>
+
+      {/* Add/Edit Teacher Dialog (simplified) */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <DialogTitle>{selectedTeacher ? 'Edit Teacher' : 'Add New Teacher'}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            This is a placeholder form. In a real application, this would be a complete form to add or edit teacher details.
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Teacher Name"
+                variant="outlined"
+                defaultValue={selectedTeacher?.name || ''}
+                margin="normal"
+              />
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Class Teacher For"
-                name="classTeacherFor"
-                value={formData.classTeacherFor}
-                onChange={handleInputChange}
-                placeholder="e.g., 10-A"
-                InputProps={{
-                  readOnly: readOnly,
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <School color="action" />
-                    </InputAdornment>
-                  ),
-                  sx: readOnly ? { bgcolor: 'action.hover' } : {}
-                }}
-                disabled={readOnly}
+                label="Employee ID"
+                variant="outlined"
+                defaultValue={selectedTeacher?.employeeId || ''}
+                margin="normal"
               />
             </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.isActive}
-                    onChange={handleSwitchChange}
-                    name="isActive"
-                    color="primary"
-                    disabled={readOnly}
-                  />
-                }
-                label="Active Status"
-              />
-            </Grid>
+            {/* Additional form fields would go here */}
           </Grid>
-
-          {/* Action Buttons */}
-          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-            {!readOnly && (
-              <>
-                <Button
-                  variant="outlined"
-                  startIcon={<Clear />}
-                  onClick={handleReset}
-                >
-                  Reset
-                </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  startIcon={<Save />}
-                >
-                  Save
-                </Button>
-              </>
-            )}
-          </Box>
-        </Box>
-      </Paper>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleSaveTeacher} variant="contained" color="primary">
+            {selectedTeacher ? 'Update' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

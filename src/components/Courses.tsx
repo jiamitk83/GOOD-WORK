@@ -1,510 +1,512 @@
 import React, { useState } from 'react';
 import {
-  Box,
+  Container,
   Typography,
-  TextField,
-  Grid,
-  Button,
   Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
+  Box,
+  IconButton,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  CardMedia,
+  Chip,
+  MenuItem,
   FormControl,
   InputLabel,
   Select,
-  MenuItem,
-  Divider,
-  Container,
-  SelectChangeEvent,
-  FormControlLabel,
-  Switch,
-  InputAdornment,
-  Chip,
-  Slider
+  Tabs,
+  Tab
 } from '@mui/material';
-import { 
-  Save, 
-  Clear, 
-  Book, 
-  Person,
-  MenuBook
-} from '@mui/icons-material';
+import { Edit, Delete, Add, Search, FilterList, BookmarkBorder } from '@mui/icons-material';
+import { useAuth } from '../context/useAuth';
 
-// Define interfaces for form data
-interface CourseFormData {
-  courseCode: string;
-  courseName: string;
-  department: string;
-  description: string;
-  creditHours: number;
-  classesPerWeek: number;
-  isElective: boolean;
-  prerequisites: string[];
-  assignedTeachers: string[];
-  forClasses: string[];
-  academicYear: string;
-  semester: string;
-  isActive: boolean;
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
 }
 
-interface CoursesProps {
-  readOnly?: boolean;
-}
-
-const Courses: React.FC<CoursesProps> = ({ readOnly = false }) => {
-  // Initial form state
-  const initialFormState: CourseFormData = {
-    courseCode: '',
-    courseName: '',
-    department: '',
-    description: '',
-    creditHours: 3,
-    classesPerWeek: 4,
-    isElective: false,
-    prerequisites: [],
-    assignedTeachers: [],
-    forClasses: [],
-    academicYear: '',
-    semester: '',
-    isActive: true
-  };
-
-  // State for form data
-  const [formData, setFormData] = useState<CourseFormData>(initialFormState);
-
-  // Department options
-  const departments = ['English', 'Mathematics', 'Science', 'Social Studies', 'Computer Science', 'Arts', 'Physical Education'];
-  
-  // Classes options
-  const classOptions = ['6-A', '6-B', '7-A', '7-B', '8-A', '8-B', '9-A', '9-B', '10-A', '10-B', '11-A', '11-B', '12-A', '12-B'];
-  
-  // Academic years
-  const academicYears = ['2023-2024', '2024-2025', '2025-2026'];
-  
-  // Semesters
-  const semesters = ['First Semester', 'Second Semester', 'Annual'];
-  
-  // Mock course list (in a real app, this would come from an API)
-  const allCourses = [
-    'Introduction to Computer Science', 
-    'Advanced Mathematics', 
-    'English Literature', 
-    'Physics I', 
-    'Chemistry Basics', 
-    'World History',
-    'Geography',
-    'Economics 101'
-  ];
-  
-  // Mock teachers list (in a real app, this would come from an API)
-  const allTeachers = [
-    'Dr. John Smith', 
-    'Prof. Sarah Johnson', 
-    'Mr. Michael Brown', 
-    'Ms. Emily Davis', 
-    'Dr. Robert Wilson',
-    'Mrs. Jennifer Lee',
-    'Mr. David Miller'
-  ];
-
-  // Handle input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-  };
-
-  // Handle select changes
-  const handleSelectChange = (e: SelectChangeEvent) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-  };
-
-  // Handle multi-select changes
-  const handleMultiSelectChange = (e: SelectChangeEvent<string[]>, field: keyof CourseFormData) => {
-    const { value } = e.target;
-    setFormData({
-      ...formData,
-      [field]: typeof value === 'string' ? value.split(',') : value,
-    });
-  };
-
-  // Handle switch changes
-  const handleSwitchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: checked,
-    });
-  };
-
-  // Handle slider changes
-  const handleSliderChange = (name: keyof CourseFormData) => (_event: Event, newValue: number | number[]) => {
-    setFormData({
-      ...formData,
-      [name]: newValue as number,
-    });
-  };
-
-  // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Form Data:', formData);
-    // Here you would typically send the data to an API
-    alert('Course information saved successfully!');
-  };
-
-  // Handle form reset
-  const handleReset = () => {
-    setFormData(initialFormState);
-  };
-
-  // Create common input props
-  const getInputProps = () => ({
-    InputProps: {
-      readOnly: readOnly,
-      sx: readOnly ? { bgcolor: 'action.hover' } : {}
-    },
-    disabled: readOnly
-  });
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
-          Course Information
-        </Typography>
-
-        {readOnly && (
-          <Paper 
-            elevation={0} 
-            sx={{ 
-              bgcolor: 'info.light', 
-              color: 'info.contrastText', 
-              p: 2, 
-              mb: 3,
-              borderRadius: 1
-            }}
-          >
-            <Typography>
-              You are in view-only mode. As a student or teacher, you can only view this information but cannot edit it.
-            </Typography>
-          </Paper>
-        )}
-
-        <Box component="form" onSubmit={handleSubmit}>
-          {/* Course Basic Information */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-            Basic Information
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                required
-                label="Course Code"
-                name="courseCode"
-                value={formData.courseCode}
-                onChange={handleInputChange}
-                placeholder="e.g., CS101"
-                InputProps={{
-                  readOnly: readOnly,
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Book color="action" />
-                    </InputAdornment>
-                  ),
-                  sx: readOnly ? { bgcolor: 'action.hover' } : {}
-                }}
-                disabled={readOnly}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                required
-                label="Course Name"
-                name="courseName"
-                value={formData.courseName}
-                onChange={handleInputChange}
-                InputProps={{
-                  readOnly: readOnly,
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <MenuBook color="action" />
-                    </InputAdornment>
-                  ),
-                  sx: readOnly ? { bgcolor: 'action.hover' } : {}
-                }}
-                disabled={readOnly}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth disabled={readOnly}>
-                <InputLabel>Department</InputLabel>
-                <Select
-                  name="department"
-                  value={formData.department}
-                  label="Department"
-                  onChange={handleSelectChange}
-                  inputProps={{
-                    readOnly: readOnly
-                  }}
-                >
-                  {departments.map((dept) => (
-                    <MenuItem key={dept} value={dept}>
-                      {dept}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth disabled={readOnly}>
-                <InputLabel>Academic Year</InputLabel>
-                <Select
-                  name="academicYear"
-                  value={formData.academicYear}
-                  label="Academic Year"
-                  onChange={handleSelectChange}
-                  inputProps={{
-                    readOnly: readOnly
-                  }}
-                >
-                  {academicYears.map((year) => (
-                    <MenuItem key={year} value={year}>
-                      {year}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                label="Course Description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                {...getInputProps()}
-              />
-            </Grid>
-          </Grid>
-
-          {/* Course Details */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-            Course Details
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Typography gutterBottom>Credit Hours: {formData.creditHours}</Typography>
-              <Slider
-                value={formData.creditHours}
-                onChange={handleSliderChange('creditHours')}
-                valueLabelDisplay="auto"
-                step={1}
-                marks
-                min={1}
-                max={6}
-                disabled={readOnly}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <Typography gutterBottom>Classes Per Week: {formData.classesPerWeek}</Typography>
-              <Slider
-                value={formData.classesPerWeek}
-                onChange={handleSliderChange('classesPerWeek')}
-                valueLabelDisplay="auto"
-                step={1}
-                marks
-                min={1}
-                max={10}
-                disabled={readOnly}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth disabled={readOnly}>
-                <InputLabel>Semester</InputLabel>
-                <Select
-                  name="semester"
-                  value={formData.semester}
-                  label="Semester"
-                  onChange={handleSelectChange}
-                  inputProps={{
-                    readOnly: readOnly
-                  }}
-                >
-                  {semesters.map((semester) => (
-                    <MenuItem key={semester} value={semester}>
-                      {semester}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.isElective}
-                    onChange={handleSwitchChange}
-                    name="isElective"
-                    color="primary"
-                    disabled={readOnly}
-                  />
-                }
-                label="Elective Course"
-              />
-              
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.isActive}
-                    onChange={handleSwitchChange}
-                    name="isActive"
-                    color="primary"
-                    disabled={readOnly}
-                  />
-                }
-                label="Active Course"
-                sx={{ ml: 2 }}
-              />
-            </Grid>
-          </Grid>
-
-          {/* Prerequisites and Assignments */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-            Prerequisites & Assignments
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth disabled={readOnly}>
-                <InputLabel>Prerequisites</InputLabel>
-                <Select
-                  multiple
-                  name="prerequisites"
-                  value={formData.prerequisites}
-                  label="Prerequisites"
-                  onChange={(e) => handleMultiSelectChange(e, 'prerequisites')}
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={value} />
-                      ))}
-                    </Box>
-                  )}
-                  inputProps={{
-                    readOnly: readOnly
-                  }}
-                >
-                  {allCourses.map((course) => (
-                    <MenuItem key={course} value={course}>
-                      {course}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth disabled={readOnly}>
-                <InputLabel>Assigned Teachers</InputLabel>
-                <Select
-                  multiple
-                  name="assignedTeachers"
-                  value={formData.assignedTeachers}
-                  label="Assigned Teachers"
-                  onChange={(e) => handleMultiSelectChange(e, 'assignedTeachers')}
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={value} icon={<Person />} />
-                      ))}
-                    </Box>
-                  )}
-                  inputProps={{
-                    readOnly: readOnly
-                  }}
-                >
-                  {allTeachers.map((teacher) => (
-                    <MenuItem key={teacher} value={teacher}>
-                      {teacher}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12}>
-              <FormControl fullWidth disabled={readOnly}>
-                <InputLabel>For Classes</InputLabel>
-                <Select
-                  multiple
-                  name="forClasses"
-                  value={formData.forClasses}
-                  label="For Classes"
-                  onChange={(e) => handleMultiSelectChange(e, 'forClasses')}
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={value} />
-                      ))}
-                    </Box>
-                  )}
-                  inputProps={{
-                    readOnly: readOnly
-                  }}
-                >
-                  {classOptions.map((classOption) => (
-                    <MenuItem key={classOption} value={classOption}>
-                      {classOption}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-
-          {/* Action Buttons */}
-          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-            {!readOnly && (
-              <>
-                <Button
-                  variant="outlined"
-                  startIcon={<Clear />}
-                  onClick={handleReset}
-                >
-                  Reset
-                </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  startIcon={<Save />}
-                >
-                  Save
-                </Button>
-              </>
-            )}
-          </Box>
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`course-tabpanel-${index}`}
+      aria-labelledby={`course-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
         </Box>
+      )}
+    </div>
+  );
+}
+
+interface Course {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  credits: number;
+  class: string;
+  subject: string;
+  teacher: string;
+  status: 'active' | 'inactive';
+  imageUrl?: string;
+}
+
+// Sample course data
+const sampleCourses: Course[] = [
+  {
+    id: '1',
+    code: 'PHY-12',
+    title: 'Physics for Senior Secondary',
+    description: 'Comprehensive study of mechanics, thermodynamics, electromagnetism, and modern physics for class 12 students.',
+    credits: 5,
+    class: '12',
+    subject: 'Physics',
+    teacher: 'Dr. Robert Miller',
+    status: 'active',
+    imageUrl: 'https://source.unsplash.com/random/800x600/?physics'
+  },
+  {
+    id: '2',
+    code: 'MATH-11',
+    title: 'Advanced Mathematics',
+    description: 'Study of calculus, trigonometry, algebra, and statistics for class 11 students.',
+    credits: 5,
+    class: '11',
+    subject: 'Mathematics',
+    teacher: 'Mrs. Lisa Wang',
+    status: 'active',
+    imageUrl: 'https://source.unsplash.com/random/800x600/?mathematics'
+  },
+  {
+    id: '3',
+    code: 'ENG-10',
+    title: 'English Language and Literature',
+    description: 'Study of English grammar, composition, and literature for class 10 students.',
+    credits: 4,
+    class: '10',
+    subject: 'English',
+    teacher: 'Ms. Sarah Johnson',
+    status: 'active',
+    imageUrl: 'https://source.unsplash.com/random/800x600/?books'
+  },
+  {
+    id: '4',
+    code: 'CHEM-12',
+    title: 'Chemistry for Senior Secondary',
+    description: 'Study of organic, inorganic, and physical chemistry for class 12 students.',
+    credits: 5,
+    class: '12',
+    subject: 'Chemistry',
+    teacher: 'Prof. Amit Sharma',
+    status: 'active',
+    imageUrl: 'https://source.unsplash.com/random/800x600/?chemistry'
+  },
+  {
+    id: '5',
+    code: 'HIST-9',
+    title: 'History: Modern World',
+    description: 'Study of world history from the 18th century to the present day for class 9 students.',
+    credits: 3,
+    class: '9',
+    subject: 'History',
+    teacher: 'Mr. James Wilson',
+    status: 'inactive',
+    imageUrl: 'https://source.unsplash.com/random/800x600/?history'
+  }
+];
+
+const classes = ['8', '9', '10', '11', '12'];
+const subjects = ['Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', 'History', 'Geography', 'Computer Science'];
+
+const Courses: React.FC = () => {
+  const { user, checkPermission } = useAuth();
+  const [courses, setCourses] = useState<Course[]>(sampleCourses);
+  const [tabValue, setTabValue] = useState(0);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterClass, setFilterClass] = useState('');
+  const [filterSubject, setFilterSubject] = useState('');
+
+  // Check permissions
+  const canManageCourses = user?.role === 'admin' || checkPermission('manage_courses');
+  const canViewCourses = canManageCourses || checkPermission('view_courses');
+
+  // Handle tab change
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
+  // Handle dialog open/close
+  const handleOpenDialog = (course?: Course) => {
+    if (course) {
+      setSelectedCourse(course);
+    } else {
+      setSelectedCourse(null);
+    }
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+  };
+
+  // Handle course form submit
+  const handleSaveCourse = () => {
+    // In a real app, we would save the course data
+    // and then update the state
+
+    // For demo purposes, just close the dialog
+    handleCloseDialog();
+  };
+
+  // Handle course deletion
+  const handleDeleteCourse = (id: string) => {
+    // In a real app, we would confirm deletion first
+    setCourses(courses.filter(course => course.id !== id));
+  };
+
+  // Apply filters
+  const filteredCourses = courses
+    .filter(course => 
+      (course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       course.code.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (filterClass ? course.class === filterClass : true) &&
+      (filterSubject ? course.subject === filterSubject : true)
+    );
+
+  // Get active and inactive courses
+  const activeCourses = filteredCourses.filter(course => course.status === 'active');
+  const inactiveCourses = filteredCourses.filter(course => course.status === 'inactive');
+
+  if (!canViewCourses) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Typography variant="h4" color="error">
+          You do not have permission to view this page.
+        </Typography>
+      </Container>
+    );
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Course Management
+        </Typography>
+        {canManageCourses && (
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<Add />}
+            onClick={() => handleOpenDialog()}
+          >
+            Add New Course
+          </Button>
+        )}
+      </Box>
+
+      {/* Search and Filter Section */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              label="Search by Title or Code"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: <Search color="action" sx={{ mr: 1 }} />
+              }}
+              size="small"
+            />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Filter by Class</InputLabel>
+              <Select
+                value={filterClass}
+                label="Filter by Class"
+                onChange={(e) => setFilterClass(e.target.value)}
+              >
+                <MenuItem value="">
+                  <em>All Classes</em>
+                </MenuItem>
+                {classes.map((cls) => (
+                  <MenuItem key={cls} value={cls}>Class {cls}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Filter by Subject</InputLabel>
+              <Select
+                value={filterSubject}
+                label="Filter by Subject"
+                onChange={(e) => setFilterSubject(e.target.value)}
+              >
+                <MenuItem value="">
+                  <em>All Subjects</em>
+                </MenuItem>
+                {subjects.map((subject) => (
+                  <MenuItem key={subject} value={subject}>{subject}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={2}>
+            <Button 
+              variant="outlined" 
+              startIcon={<FilterList />}
+              fullWidth
+              onClick={() => {
+                setFilterClass('');
+                setFilterSubject('');
+                setSearchTerm('');
+              }}
+            >
+              Clear
+            </Button>
+          </Grid>
+        </Grid>
       </Paper>
+
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs value={tabValue} onChange={handleTabChange} aria-label="course tabs">
+          <Tab label={`Active Courses (${activeCourses.length})`} />
+          <Tab label={`Inactive Courses (${inactiveCourses.length})`} />
+          <Tab label="Course Cards" />
+        </Tabs>
+      </Box>
+
+      {/* Tab Panels */}
+      <TabPanel value={tabValue} index={0}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Course Code</TableCell>
+                <TableCell>Title</TableCell>
+                <TableCell>Class</TableCell>
+                <TableCell>Subject</TableCell>
+                <TableCell>Teacher</TableCell>
+                <TableCell>Credits</TableCell>
+                {canManageCourses && <TableCell align="right">Actions</TableCell>}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {activeCourses.map((course) => (
+                <TableRow key={course.id} hover>
+                  <TableCell>{course.code}</TableCell>
+                  <TableCell>{course.title}</TableCell>
+                  <TableCell>{course.class}</TableCell>
+                  <TableCell>{course.subject}</TableCell>
+                  <TableCell>{course.teacher}</TableCell>
+                  <TableCell>{course.credits}</TableCell>
+                  {canManageCourses && (
+                    <TableCell align="right">
+                      <IconButton color="primary" onClick={() => handleOpenDialog(course)}>
+                        <Edit />
+                      </IconButton>
+                      <IconButton color="error" onClick={() => handleDeleteCourse(course.id)}>
+                        <Delete />
+                      </IconButton>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={1}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Course Code</TableCell>
+                <TableCell>Title</TableCell>
+                <TableCell>Class</TableCell>
+                <TableCell>Subject</TableCell>
+                <TableCell>Teacher</TableCell>
+                <TableCell>Credits</TableCell>
+                {canManageCourses && <TableCell align="right">Actions</TableCell>}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {inactiveCourses.map((course) => (
+                <TableRow key={course.id} hover sx={{ bgcolor: 'rgba(0, 0, 0, 0.05)' }}>
+                  <TableCell>{course.code}</TableCell>
+                  <TableCell>{course.title}</TableCell>
+                  <TableCell>{course.class}</TableCell>
+                  <TableCell>{course.subject}</TableCell>
+                  <TableCell>{course.teacher}</TableCell>
+                  <TableCell>{course.credits}</TableCell>
+                  {canManageCourses && (
+                    <TableCell align="right">
+                      <IconButton color="primary" onClick={() => handleOpenDialog(course)}>
+                        <Edit />
+                      </IconButton>
+                      <IconButton color="error" onClick={() => handleDeleteCourse(course.id)}>
+                        <Delete />
+                      </IconButton>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={2}>
+        <Grid container spacing={3}>
+          {filteredCourses.map((course) => (
+            <Grid item xs={12} sm={6} md={4} key={course.id}>
+              <Card 
+                sx={{ 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  opacity: course.status === 'inactive' ? 0.7 : 1
+                }}
+              >
+                <CardMedia
+                  component="img"
+                  height="140"
+                  image={course.imageUrl || `https://source.unsplash.com/random/800x600/?${course.subject.toLowerCase()}`}
+                  alt={course.title}
+                />
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                    <Typography variant="h6" component="div">
+                      {course.title}
+                    </Typography>
+                    <Chip 
+                      label={course.code} 
+                      size="small" 
+                      color="primary" 
+                      variant="outlined" 
+                    />
+                  </Box>
+                  <Box sx={{ mb: 1 }}>
+                    <Chip 
+                      label={`Class ${course.class}`} 
+                      size="small" 
+                      sx={{ mr: 0.5 }} 
+                    />
+                    <Chip 
+                      label={course.subject} 
+                      size="small" 
+                    />
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    {course.description.length > 100 
+                      ? `${course.description.substring(0, 100)}...` 
+                      : course.description}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Teacher:</strong> {course.teacher}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Credits:</strong> {course.credits}
+                  </Typography>
+                  {course.status === 'inactive' && (
+                    <Chip 
+                      label="Inactive" 
+                      size="small" 
+                      color="default"
+                      sx={{ mt: 1 }} 
+                    />
+                  )}
+                </CardContent>
+                {canManageCourses && (
+                  <CardActions>
+                    <Button 
+                      size="small" 
+                      startIcon={<Edit />}
+                      onClick={() => handleOpenDialog(course)}
+                    >
+                      Edit
+                    </Button>
+                    <Button 
+                      size="small" 
+                      color="error" 
+                      startIcon={<Delete />}
+                      onClick={() => handleDeleteCourse(course.id)}
+                    >
+                      Delete
+                    </Button>
+                  </CardActions>
+                )}
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </TabPanel>
+
+      {/* Add/Edit Course Dialog (simplified) */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <DialogTitle>{selectedCourse ? 'Edit Course' : 'Add New Course'}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            This is a placeholder form. In a real application, this would be a complete form to add or edit course details.
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Course Title"
+                variant="outlined"
+                defaultValue={selectedCourse?.title || ''}
+                margin="normal"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Course Code"
+                variant="outlined"
+                defaultValue={selectedCourse?.code || ''}
+                margin="normal"
+              />
+            </Grid>
+            {/* Additional form fields would go here */}
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleSaveCourse} variant="contained" color="primary">
+            {selectedCourse ? 'Update' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

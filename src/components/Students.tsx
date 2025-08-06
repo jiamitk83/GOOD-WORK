@@ -1,558 +1,576 @@
 import React, { useState } from 'react';
 import {
-  Box,
+  Container,
   Typography,
-  TextField,
-  Grid,
-  MenuItem,
-  Button,
   Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
+  Box,
+  IconButton,
+  Tabs,
+  Tab,
+  Grid,
   FormControl,
   InputLabel,
   Select,
-  FormControlLabel,
-  Checkbox,
-  Divider,
-  Container,
-  SelectChangeEvent
+  MenuItem,
+  Avatar,
+  Card,
+  CardContent,
+  Chip,
+  Divider
 } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { Save, Clear } from '@mui/icons-material';
+import { Edit, Delete, Add, Search, FilterList, ArrowDownward, ArrowUpward } from '@mui/icons-material';
+import { useAuth } from '../context/useAuth';
 
-// Define interfaces for form data
-interface StudentFormData {
-  studentName: string;
-  admissionNumber: string;
-  classSection: string;
-  house: string;
-  dateOfBirth: Date | null;
-  bloodGroup: string;
-  classTeacherName: string;
-  busRouteNumber: string;
-  busStop: string;
-  residentialAddress: string;
-  mothersName: string;
-  mothersOccupation: string;
-  mothersOfficeAddress: string;
-  mothersMobile: string;
-  mothersEmail: string;
-  fathersName: string;
-  fathersOccupation: string;
-  fathersOfficeAddress: string;
-  fathersMobile: string;
-  fathersEmail: string;
-  emergencyContactName: string;
-  emergencyContactNumber: string;
-  hasSiblingInSchool: boolean;
-  siblingNameWithClass: string;
-  hasChronicDisease: boolean;
-  chronicDiseaseDetails: string;
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
 }
 
-interface StudentsProps {
-  readOnly?: boolean;
-}
-
-const Students: React.FC<StudentsProps> = ({ readOnly = false }) => {
-  // Initial form state
-  const initialFormState: StudentFormData = {
-    studentName: '',
-    admissionNumber: '',
-    classSection: '',
-    house: '',
-    dateOfBirth: null,
-    bloodGroup: '',
-    classTeacherName: '',
-    busRouteNumber: '',
-    busStop: '',
-    residentialAddress: '',
-    mothersName: '',
-    mothersOccupation: '',
-    mothersOfficeAddress: '',
-    mothersMobile: '',
-    mothersEmail: '',
-    fathersName: '',
-    fathersOccupation: '',
-    fathersOfficeAddress: '',
-    fathersMobile: '',
-    fathersEmail: '',
-    emergencyContactName: '',
-    emergencyContactNumber: '',
-    hasSiblingInSchool: false,
-    siblingNameWithClass: '',
-    hasChronicDisease: false,
-    chronicDiseaseDetails: '',
-  };
-
-  // State for form data
-  const [formData, setFormData] = useState<StudentFormData>(initialFormState);
-
-  // Blood group options
-  const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-  
-  // House options
-  const houses = ['Red', 'Blue', 'Green', 'Yellow'];
-
-  // Handle input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-  };
-
-  // Handle select changes
-  const handleSelectChange = (e: SelectChangeEvent) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-  };
-
-  // Handle checkbox changes
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: checked,
-    });
-  };
-
-  // Handle date change
-  const handleDateChange = (date: Date | null) => {
-    setFormData({
-      ...formData,
-      dateOfBirth: date,
-    });
-  };
-
-  // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Form Data:', formData);
-    // Here you would typically send the data to an API
-    alert('Student information saved successfully!');
-  };
-
-  // Handle form reset
-  const handleReset = () => {
-    setFormData(initialFormState);
-  };
-
-  // Create common input props
-  const getInputProps = () => ({
-    InputProps: {
-      readOnly: readOnly,
-      sx: readOnly ? { bgcolor: 'action.hover' } : {}
-    },
-    disabled: readOnly
-  });
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
-          Student Information Form
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`student-tabpanel-${index}`}
+      aria-labelledby={`student-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
+
+interface Student {
+  id: string;
+  name: string;
+  rollNumber: string;
+  class: string;
+  section: string;
+  gender: string;
+  dob: string;
+  fatherName: string;
+  motherName: string;
+  address: string;
+  contactNumber: string;
+  email: string;
+  admissionDate: string;
+  status: 'active' | 'inactive';
+}
+
+// Sample student data
+const sampleStudents: Student[] = [
+  {
+    id: '1',
+    name: 'John Smith',
+    rollNumber: 'STU001',
+    class: '10',
+    section: 'A',
+    gender: 'Male',
+    dob: '2008-05-10',
+    fatherName: 'David Smith',
+    motherName: 'Sarah Smith',
+    address: '123 Main St, Anytown',
+    contactNumber: '555-123-4567',
+    email: 'john@example.com',
+    admissionDate: '2020-04-15',
+    status: 'active'
+  },
+  {
+    id: '2',
+    name: 'Emma Johnson',
+    rollNumber: 'STU002',
+    class: '10',
+    section: 'A',
+    gender: 'Female',
+    dob: '2008-07-22',
+    fatherName: 'Michael Johnson',
+    motherName: 'Lisa Johnson',
+    address: '456 Oak Ave, Anytown',
+    contactNumber: '555-987-6543',
+    email: 'emma@example.com',
+    admissionDate: '2020-04-18',
+    status: 'active'
+  },
+  {
+    id: '3',
+    name: 'Rahul Sharma',
+    rollNumber: 'STU003',
+    class: '9',
+    section: 'B',
+    gender: 'Male',
+    dob: '2009-03-15',
+    fatherName: 'Raj Sharma',
+    motherName: 'Priya Sharma',
+    address: '789 Maple Dr, Anytown',
+    contactNumber: '555-456-7890',
+    email: 'rahul@example.com',
+    admissionDate: '2021-04-10',
+    status: 'active'
+  },
+  {
+    id: '4',
+    name: 'Sophia Wang',
+    rollNumber: 'STU004',
+    class: '8',
+    section: 'C',
+    gender: 'Female',
+    dob: '2010-11-05',
+    fatherName: 'Li Wang',
+    motherName: 'Min Wang',
+    address: '101 Pine St, Anytown',
+    contactNumber: '555-789-0123',
+    email: 'sophia@example.com',
+    admissionDate: '2022-04-05',
+    status: 'active'
+  },
+  {
+    id: '5',
+    name: 'Mohammed Al-Farsi',
+    rollNumber: 'STU005',
+    class: '11',
+    section: 'A',
+    gender: 'Male',
+    dob: '2007-09-18',
+    fatherName: 'Ahmed Al-Farsi',
+    motherName: 'Fatima Al-Farsi',
+    address: '202 Cedar Lane, Anytown',
+    contactNumber: '555-234-5678',
+    email: 'mohammed@example.com',
+    admissionDate: '2019-04-20',
+    status: 'inactive'
+  }
+];
+
+const classes = ['8', '9', '10', '11', '12'];
+const sections = ['A', 'B', 'C', 'D'];
+
+const Students: React.FC = () => {
+  const { user, checkPermission } = useAuth();
+  const [students, setStudents] = useState<Student[]>(sampleStudents);
+  const [tabValue, setTabValue] = useState(0);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterClass, setFilterClass] = useState('');
+  const [filterSection, setFilterSection] = useState('');
+  const [sortField, setSortField] = useState<keyof Student>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Check permissions
+  const canManageStudents = user?.role === 'admin' || checkPermission('manage_students');
+  const canViewStudents = canManageStudents || checkPermission('view_students');
+
+  // Handle tab change
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
+  // Handle dialog open/close
+  const handleOpenDialog = (student?: Student) => {
+    if (student) {
+      setSelectedStudent(student);
+    } else {
+      setSelectedStudent(null);
+    }
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+  };
+
+  // Handle student form submit
+  const handleSaveStudent = () => {
+    // In a real app, we would save the student data
+    // and then update the state
+
+    // For demo purposes, just close the dialog
+    handleCloseDialog();
+  };
+
+  // Handle student deletion
+  const handleDeleteStudent = (id: string) => {
+    // In a real app, we would confirm deletion first
+    setStudents(students.filter(student => student.id !== id));
+  };
+
+  // Handle sorting
+  const handleSort = (field: keyof Student) => {
+    if (sortField === field) {
+      // Toggle sort direction if clicking the same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new sort field and default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Apply filters and sorting
+  const filteredStudents = students
+    .filter(student => 
+      (student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       student.rollNumber.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (filterClass ? student.class === filterClass : true) &&
+      (filterSection ? student.section === filterSection : true)
+    )
+    .sort((a, b) => {
+      if (a[sortField] < b[sortField]) return sortDirection === 'asc' ? -1 : 1;
+      if (a[sortField] > b[sortField]) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  // Get active and inactive students
+  const activeStudents = filteredStudents.filter(student => student.status === 'active');
+  const inactiveStudents = filteredStudents.filter(student => student.status === 'inactive');
+
+  if (!canViewStudents) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Typography variant="h4" color="error">
+          You do not have permission to view this page.
         </Typography>
+      </Container>
+    );
+  }
 
-        {readOnly && (
-          <Paper 
-            elevation={0} 
-            sx={{ 
-              bgcolor: 'info.light', 
-              color: 'info.contrastText', 
-              p: 2, 
-              mb: 3,
-              borderRadius: 1
-            }}
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Student Management
+        </Typography>
+        {canManageStudents && (
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<Add />}
+            onClick={() => handleOpenDialog()}
           >
-            <Typography>
-              You are in view-only mode. As a student or teacher, you can only view this information but cannot edit it.
-            </Typography>
-          </Paper>
+            Add New Student
+          </Button>
         )}
+      </Box>
 
-        <Box component="form" onSubmit={handleSubmit}>
-          {/* Student Basic Information */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-            Basic Information
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                required
-                label="Student Name"
-                name="studentName"
-                value={formData.studentName}
-                onChange={handleInputChange}
-                {...getInputProps()}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                required
-                label="Admission Number"
-                name="admissionNumber"
-                value={formData.admissionNumber}
-                onChange={handleInputChange}
-                {...getInputProps()}
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                required
-                label="Class/Section"
-                name="classSection"
-                value={formData.classSection}
-                onChange={handleInputChange}
-                placeholder="e.g., 10-A"
-                {...getInputProps()}
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth disabled={readOnly}>
-                <InputLabel>House</InputLabel>
-                <Select
-                  name="house"
-                  value={formData.house}
-                  label="House"
-                  onChange={handleSelectChange}
-                  inputProps={{
-                    readOnly: readOnly
-                  }}
-                >
-                  {houses.map((house) => (
-                    <MenuItem key={house} value={house}>
-                      {house}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Date of Birth"
-                  value={formData.dateOfBirth}
-                  onChange={handleDateChange}
-                  slotProps={{ 
-                    textField: { 
-                      fullWidth: true,
-                      ...getInputProps()
-                    } 
-                  }}
-                  readOnly={readOnly}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth disabled={readOnly}>
-                <InputLabel>Blood Group</InputLabel>
-                <Select
-                  name="bloodGroup"
-                  value={formData.bloodGroup}
-                  label="Blood Group"
-                  onChange={handleSelectChange}
-                  inputProps={{
-                    readOnly: readOnly
-                  }}
-                >
-                  {bloodGroups.map((group) => (
-                    <MenuItem key={group} value={group}>
-                      {group}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="Class Teacher's Name"
-                name="classTeacherName"
-                value={formData.classTeacherName}
-                onChange={handleInputChange}
-              />
-            </Grid>
-          </Grid>
-
-          {/* Transportation Information */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-            Transportation Information
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="Bus Route Number"
-                name="busRouteNumber"
-                value={formData.busRouteNumber}
-                onChange={handleInputChange}
-              />
-            </Grid>
-            <Grid item xs={12} md={8}>
-              <TextField
-                fullWidth
-                label="Bus Stop"
-                name="busStop"
-                value={formData.busStop}
-                onChange={handleInputChange}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                label="Residential Address"
-                name="residentialAddress"
-                value={formData.residentialAddress}
-                onChange={handleInputChange}
-              />
-            </Grid>
-          </Grid>
-
-          {/* Mother's Information */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-            Mother's Information
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                required
-                label="Mother's Name"
-                name="mothersName"
-                value={formData.mothersName}
-                onChange={handleInputChange}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Occupation"
-                name="mothersOccupation"
-                value={formData.mothersOccupation}
-                onChange={handleInputChange}
-              />
-            </Grid>
-            <Grid item xs={12} md={12}>
-              <TextField
-                fullWidth
-                multiline
-                rows={2}
-                label="Office Address"
-                name="mothersOfficeAddress"
-                value={formData.mothersOfficeAddress}
-                onChange={handleInputChange}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                required
-                label="Mobile"
-                name="mothersMobile"
-                value={formData.mothersMobile}
-                onChange={handleInputChange}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Email ID"
-                name="mothersEmail"
-                type="email"
-                value={formData.mothersEmail}
-                onChange={handleInputChange}
-              />
-            </Grid>
-          </Grid>
-
-          {/* Father's Information */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-            Father's Information
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                required
-                label="Father's Name"
-                name="fathersName"
-                value={formData.fathersName}
-                onChange={handleInputChange}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Occupation"
-                name="fathersOccupation"
-                value={formData.fathersOccupation}
-                onChange={handleInputChange}
-              />
-            </Grid>
-            <Grid item xs={12} md={12}>
-              <TextField
-                fullWidth
-                multiline
-                rows={2}
-                label="Office Address"
-                name="fathersOfficeAddress"
-                value={formData.fathersOfficeAddress}
-                onChange={handleInputChange}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                required
-                label="Mobile"
-                name="fathersMobile"
-                value={formData.fathersMobile}
-                onChange={handleInputChange}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Email ID"
-                name="fathersEmail"
-                type="email"
-                value={formData.fathersEmail}
-                onChange={handleInputChange}
-              />
-            </Grid>
-          </Grid>
-
-          {/* Emergency Contact Information */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-            Emergency Contact Information
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                required
-                label="Emergency Contact Person Name"
-                name="emergencyContactName"
-                value={formData.emergencyContactName}
-                onChange={handleInputChange}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                required
-                label="Emergency Contact Number"
-                name="emergencyContactNumber"
-                value={formData.emergencyContactNumber}
-                onChange={handleInputChange}
-              />
-            </Grid>
-          </Grid>
-
-          {/* Additional Information */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-            Additional Information
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={formData.hasSiblingInSchool}
-                    onChange={handleCheckboxChange}
-                    name="hasSiblingInSchool"
-                    disabled={readOnly}
-                  />
-                }
-                label="Brother/Sister in School"
-              />
-            </Grid>
-            {formData.hasSiblingInSchool && (
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Name of the Brother/Sister with Class"
-                  name="siblingNameWithClass"
-                  value={formData.siblingNameWithClass}
-                  onChange={handleInputChange}
-                  {...getInputProps()}
-                />
-              </Grid>
-            )}
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={formData.hasChronicDisease}
-                    onChange={handleCheckboxChange}
-                    name="hasChronicDisease"
-                    disabled={readOnly}
-                  />
-                }
-                label="Any Chronic Disease"
-              />
-            </Grid>
-            {formData.hasChronicDisease && (
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Chronic Disease Details"
-                  name="chronicDiseaseDetails"
-                  value={formData.chronicDiseaseDetails}
-                  onChange={handleInputChange}
-                  multiline
-                  rows={2}
-                  {...getInputProps()}
-                />
-              </Grid>
-            )}
-          </Grid>
-
-          {/* Form Actions */}
-          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-            <Button
+      {/* Search and Filter Section */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
               variant="outlined"
-              startIcon={<Clear />}
-              onClick={handleReset}
-              disabled={readOnly}
+              label="Search by Name or Roll Number"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: <Search color="action" sx={{ mr: 1 }} />
+              }}
+              size="small"
+            />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Filter by Class</InputLabel>
+              <Select
+                value={filterClass}
+                label="Filter by Class"
+                onChange={(e) => setFilterClass(e.target.value)}
+              >
+                <MenuItem value="">
+                  <em>All Classes</em>
+                </MenuItem>
+                {classes.map((cls) => (
+                  <MenuItem key={cls} value={cls}>Class {cls}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Filter by Section</InputLabel>
+              <Select
+                value={filterSection}
+                label="Filter by Section"
+                onChange={(e) => setFilterSection(e.target.value)}
+              >
+                <MenuItem value="">
+                  <em>All Sections</em>
+                </MenuItem>
+                {sections.map((section) => (
+                  <MenuItem key={section} value={section}>Section {section}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={2}>
+            <Button 
+              variant="outlined" 
+              startIcon={<FilterList />}
+              fullWidth
+              onClick={() => {
+                setFilterClass('');
+                setFilterSection('');
+                setSearchTerm('');
+              }}
             >
               Clear
             </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              startIcon={<Save />}
-              disabled={readOnly}
-            >
-              Save
-            </Button>
-          </Box>
-        </Box>
+          </Grid>
+        </Grid>
       </Paper>
+
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs value={tabValue} onChange={handleTabChange} aria-label="student tabs">
+          <Tab label={`Active Students (${activeStudents.length})`} />
+          <Tab label={`Inactive Students (${inactiveStudents.length})`} />
+          <Tab label="Student Details" />
+        </Tabs>
+      </Box>
+
+      {/* Tab Panels */}
+      <TabPanel value={tabValue} index={0}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => handleSort('name')}>
+                    <Typography variant="subtitle2" fontWeight="bold">Student Name</Typography>
+                    {sortField === 'name' && (sortDirection === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />)}
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => handleSort('rollNumber')}>
+                    <Typography variant="subtitle2" fontWeight="bold">Roll No.</Typography>
+                    {sortField === 'rollNumber' && (sortDirection === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />)}
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => handleSort('class')}>
+                    <Typography variant="subtitle2" fontWeight="bold">Class</Typography>
+                    {sortField === 'class' && (sortDirection === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />)}
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="subtitle2" fontWeight="bold">Section</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="subtitle2" fontWeight="bold">Gender</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="subtitle2" fontWeight="bold">Contact</Typography>
+                </TableCell>
+                {canManageStudents && <TableCell align="right">Actions</TableCell>}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {activeStudents.map((student) => (
+                <TableRow key={student.id} hover>
+                  <TableCell>{student.name}</TableCell>
+                  <TableCell>{student.rollNumber}</TableCell>
+                  <TableCell>{student.class}</TableCell>
+                  <TableCell>{student.section}</TableCell>
+                  <TableCell>{student.gender}</TableCell>
+                  <TableCell>{student.contactNumber}</TableCell>
+                  {canManageStudents && (
+                    <TableCell align="right">
+                      <IconButton color="primary" onClick={() => handleOpenDialog(student)}>
+                        <Edit />
+                      </IconButton>
+                      <IconButton color="error" onClick={() => handleDeleteStudent(student.id)}>
+                        <Delete />
+                      </IconButton>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={1}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Student Name</TableCell>
+                <TableCell>Roll No.</TableCell>
+                <TableCell>Class</TableCell>
+                <TableCell>Section</TableCell>
+                <TableCell>Gender</TableCell>
+                <TableCell>Contact</TableCell>
+                {canManageStudents && <TableCell align="right">Actions</TableCell>}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {inactiveStudents.map((student) => (
+                <TableRow key={student.id} hover sx={{ bgcolor: 'rgba(0, 0, 0, 0.05)' }}>
+                  <TableCell>{student.name}</TableCell>
+                  <TableCell>{student.rollNumber}</TableCell>
+                  <TableCell>{student.class}</TableCell>
+                  <TableCell>{student.section}</TableCell>
+                  <TableCell>{student.gender}</TableCell>
+                  <TableCell>{student.contactNumber}</TableCell>
+                  {canManageStudents && (
+                    <TableCell align="right">
+                      <IconButton color="primary" onClick={() => handleOpenDialog(student)}>
+                        <Edit />
+                      </IconButton>
+                      <IconButton color="error" onClick={() => handleDeleteStudent(student.id)}>
+                        <Delete />
+                      </IconButton>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={2}>
+        <Grid container spacing={3}>
+          {filteredStudents.map((student) => (
+            <Grid item xs={12} md={6} key={student.id}>
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+                      {student.name.charAt(0)}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h6">{student.name}</Typography>
+                      <Chip 
+                        label={student.status === 'active' ? 'Active' : 'Inactive'} 
+                        color={student.status === 'active' ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </Box>
+                  </Box>
+                  
+                  <Divider sx={{ my: 1 }} />
+                  
+                  <Grid container spacing={1}>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">Roll Number:</Typography>
+                      <Typography variant="body1">{student.rollNumber}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">Class & Section:</Typography>
+                      <Typography variant="body1">{student.class}-{student.section}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">Date of Birth:</Typography>
+                      <Typography variant="body1">{student.dob}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">Gender:</Typography>
+                      <Typography variant="body1">{student.gender}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">Parents:</Typography>
+                      <Typography variant="body1">{student.fatherName} & {student.motherName}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">Contact:</Typography>
+                      <Typography variant="body1">{student.contactNumber}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">Email:</Typography>
+                      <Typography variant="body1">{student.email}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">Address:</Typography>
+                      <Typography variant="body1">{student.address}</Typography>
+                    </Grid>
+                  </Grid>
+                  
+                  {canManageStudents && (
+                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                      <Button 
+                        size="small" 
+                        variant="outlined" 
+                        startIcon={<Edit />}
+                        onClick={() => handleOpenDialog(student)}
+                        sx={{ mr: 1 }}
+                      >
+                        Edit
+                      </Button>
+                      <Button 
+                        size="small" 
+                        variant="outlined" 
+                        color="error" 
+                        startIcon={<Delete />}
+                        onClick={() => handleDeleteStudent(student.id)}
+                      >
+                        Delete
+                      </Button>
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </TabPanel>
+
+      {/* Add/Edit Student Dialog (simplified) */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <DialogTitle>{selectedStudent ? 'Edit Student' : 'Add New Student'}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            This is a placeholder form. In a real application, this would be a complete form to add or edit student details.
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Student Name"
+                variant="outlined"
+                defaultValue={selectedStudent?.name || ''}
+                margin="normal"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Roll Number"
+                variant="outlined"
+                defaultValue={selectedStudent?.rollNumber || ''}
+                margin="normal"
+              />
+            </Grid>
+            {/* Additional form fields would go here */}
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleSaveStudent} variant="contained" color="primary">
+            {selectedStudent ? 'Update' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

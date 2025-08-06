@@ -1,297 +1,320 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import {
-  Box,
+  Container,
+  Paper,
   Typography,
   TextField,
   Button,
-  Paper,
-  Container,
-  Grid,
+  Box,
+  Alert,
+  CircularProgress,
+  Divider,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  FormHelperText,
-  InputAdornment,
-  IconButton,
-  Link as MuiLink,
-  Alert
+  Chip,
+  Stack
 } from '@mui/material';
-import {
-  School,
-  Visibility,
-  VisibilityOff,
-  LockOutlined,
-  EmailOutlined
-} from '@mui/icons-material';
-import { Link, useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import { School, LockOutlined, Person, SupervisorAccount, MenuBook } from '@mui/icons-material';
+import { useAuth } from '../context/useAuth';
 
 const Login: React.FC = () => {
+  const [loginType, setLoginType] = useState('email'); // 'email' or 'id'
+  const [userRole, setUserRole] = useState(''); // 'student', 'teacher', 'staff', 'admin'
+  const [loginId, setLoginId] = useState(''); // email or ID number
+  const [password, setPassword] = useState('');
+  const [formErrors, setFormErrors] = useState<{ loginId?: string; password?: string; userRole?: string }>({});
+  
+  const { login, isLoading, error } = useAuth();
   const navigate = useNavigate();
-  const { login } = useContext(AuthContext);
-  
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    role: 'teacher',
-  });
-  
-  const [errors, setErrors] = useState({
-    email: '',
-    password: '',
-  });
-  
-  const [showPassword, setShowPassword] = useState(false);
-  const [loginError, setLoginError] = useState('');
-  
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-    
-    // Clear error when user types
-    if (errors[name as keyof typeof errors]) {
-      setErrors({
-        ...errors,
-        [name]: '',
-      });
+
+  const validateForm = (): boolean => {
+    const errors: { loginId?: string; password?: string; userRole?: string } = {};
+    let isValid = true;
+
+    if (!userRole) {
+      errors.userRole = 'Please select your role';
+      isValid = false;
     }
-  };
-  
-  const handleRoleChange = (e: any) => {
-    setFormData({
-      ...formData,
-      role: e.target.value,
-    });
-  };
-  
-  const handleClickShowPassword = () => {
-    setShowPassword(!showPassword);
-  };
-  
-  const validateForm = () => {
-    let valid = true;
-    const newErrors = { ...errors };
-    
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-      valid = false;
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-      valid = false;
-    } else {
-      newErrors.email = '';
+
+    if (!loginId) {
+      errors.loginId = loginType === 'email' ? 'Email is required' : 'ID number is required';
+      isValid = false;
+    } else if (loginType === 'email' && !/\S+@\S+\.\S+/.test(loginId)) {
+      errors.loginId = 'Please enter a valid email address';
+      isValid = false;
+    } else if (loginType === 'id' && loginId.length < 3) {
+      errors.loginId = 'ID must be at least 3 characters';
+      isValid = false;
     }
-    
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-      valid = false;
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-      valid = false;
-    } else {
-      newErrors.password = '';
+
+    if (!password) {
+      errors.password = 'Password is required';
+      isValid = false;
+    } else if (password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+      isValid = false;
     }
-    
-    setErrors(newErrors);
-    return valid;
+
+    setFormErrors(errors);
+    return isValid;
   };
-  
-  const handleSubmit = (e: React.FormEvent) => {
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (validateForm()) {
-      // Admin login for demonstration purposes
-      if (formData.role === 'admin' && formData.email === 'admin@example.com' && formData.password === 'admin123') {
-        const loginSuccess = login({
-          id: '1',
-          name: 'System Administrator',
-          email: formData.email,
-          role: 'admin',
-          approved: true
-        });
-        
-        if (loginSuccess) {
-          navigate('/admin');
-        }
-        return;
-      }
-      
-      // Check approved users from localStorage
-      const approvedUsers = JSON.parse(localStorage.getItem('approvedUsers') || '[]');
-      const approvedUser = approvedUsers.find((user: any) => 
-        user.email === formData.email && 
-        user.role === formData.role
-      );
-      
-      if (approvedUser) {
-        // In a real implementation, we would verify the password hash here
-        const loginSuccess = login(approvedUser);
-        if (loginSuccess) {
-          navigate('/');
-        }
-        return;
-      }
-      
-      // Check if user is pending approval
-      const pendingUsers = JSON.parse(localStorage.getItem('pendingUsers') || '[]');
-      const isPending = pendingUsers.some((user: any) => 
-        user.email === formData.email && 
-        user.role === formData.role
-      );
-      
-      if (isPending) {
-        setLoginError('Your account is pending admin approval. Please try again later.');
-      } else {
-        // If we get here, login failed
-        setLoginError('Invalid email, password, or role combination');
+      const success = await login(loginId, password);
+      if (success) {
+        navigate('/dashboard');
       }
     }
   };
-  
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'student': return <Person />;
+      case 'teacher': return <MenuBook />;
+      case 'staff': return <SupervisorAccount />;
+      case 'admin': return <SupervisorAccount />;
+      default: return <Person />;
+    }
+  };
+
+  const getPlaceholderText = () => {
+    if (!userRole) return 'Select your role first';
+    
+    switch (userRole) {
+      case 'student':
+        return loginType === 'email' ? 'student@school.edu' : 'Student ID (e.g., STU001)';
+      case 'teacher':
+        return loginType === 'email' ? 'teacher@school.edu' : 'Teacher ID (e.g., TCH001)';
+      case 'staff':
+        return loginType === 'email' ? 'staff@school.edu' : 'Staff ID (e.g., STF001)';
+      case 'admin':
+        return loginType === 'email' ? 'admin@school.edu' : 'Admin ID (e.g., ADM001)';
+      default:
+        return loginType === 'email' ? 'Enter your email' : 'Enter your ID';
+    }
+  };
+
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper elevation={3} sx={{ p: 4, width: '100%', mt: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-            <School color="primary" sx={{ fontSize: 40 }} />
-          </Box>
-          
-          <Typography component="h1" variant="h5" align="center" gutterBottom>
-            School ERP System
-          </Typography>
-          
-          <Typography component="h2" variant="h6" align="center" color="text.secondary" sx={{ mb: 3 }}>
-            Sign In
-          </Typography>
-          
-          {loginError && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {loginError}
-            </Alert>
-          )}
-          
-          <Box component="form" onSubmit={handleSubmit} noValidate>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={formData.email}
-              onChange={handleInputChange}
-              error={!!errors.email}
-              helperText={errors.email}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <EmailOutlined />
-                  </InputAdornment>
-                ),
+    <Container maxWidth="sm" sx={{ mt: 8 }}>
+      <Paper elevation={3} sx={{ p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <School sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
+        <Typography variant="h4" component="h1" gutterBottom>
+          School ERP System
+        </Typography>
+        <Typography variant="subtitle1" gutterBottom color="text.secondary">
+          Sign in to access your account
+        </Typography>
+
+        {error && (
+          <Alert severity="error" sx={{ width: '100%', mt: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3, width: '100%' }}>
+          {/* Role Selection */}
+          <FormControl fullWidth margin="normal" required>
+            <InputLabel id="user-role-label">I am a...</InputLabel>
+            <Select
+              labelId="user-role-label"
+              id="user-role"
+              value={userRole}
+              label="I am a..."
+              onChange={(e) => {
+                setUserRole(e.target.value);
+                setLoginId(''); // Clear login ID when role changes
+                setFormErrors({});
               }}
-            />
-            
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              id="password"
-              autoComplete="current-password"
-              value={formData.password}
-              onChange={handleInputChange}
-              error={!!errors.password}
-              helperText={errors.password}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <LockOutlined />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={handleClickShowPassword}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-            
-            <FormControl fullWidth margin="normal">
-              <InputLabel id="role-select-label">Login As</InputLabel>
-              <Select
-                labelId="role-select-label"
-                id="role-select"
-                value={formData.role}
-                label="Login As"
-                onChange={handleRoleChange}
-              >
-                <MenuItem value="admin">Administrator</MenuItem>
-                <MenuItem value="teacher">Teacher</MenuItem>
-                <MenuItem value="student">Student</MenuItem>
-                <MenuItem value="parent">Parent</MenuItem>
-              </Select>
-              <FormHelperText>
-                Select your role in the school
-              </FormHelperText>
-            </FormControl>
-            
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              error={!!formErrors.userRole}
             >
-              Sign In
-            </Button>
-            
-            <Grid container>
-              <Grid item xs>
-                <MuiLink component={Link} to="/forgot-password" variant="body2">
-                  Forgot password?
-                </MuiLink>
-              </Grid>
-              <Grid item>
-                <MuiLink component={Link} to="/register" variant="body2">
-                  {"Don't have an account? Sign Up"}
-                </MuiLink>
-              </Grid>
-            </Grid>
+              <MenuItem value="student">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Person fontSize="small" />
+                  Student
+                </Box>
+              </MenuItem>
+              <MenuItem value="teacher">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <MenuBook fontSize="small" />
+                  Teacher
+                </Box>
+              </MenuItem>
+              <MenuItem value="staff">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <SupervisorAccount fontSize="small" />
+                  Staff
+                </Box>
+              </MenuItem>
+              <MenuItem value="admin">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <SupervisorAccount fontSize="small" />
+                  Administrator
+                </Box>
+              </MenuItem>
+            </Select>
+            {formErrors.userRole && (
+              <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 2 }}>
+                {formErrors.userRole}
+              </Typography>
+            )}
+          </FormControl>
+
+          {/* Login Type Selection */}
+          {userRole && (
+            <Box sx={{ mt: 2, mb: 1 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Login with:
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                <Chip
+                  label="Email Address"
+                  onClick={() => {
+                    setLoginType('email');
+                    setLoginId('');
+                  }}
+                  color={loginType === 'email' ? 'primary' : 'default'}
+                  variant={loginType === 'email' ? 'filled' : 'outlined'}
+                />
+                <Chip
+                  label={`${userRole.charAt(0).toUpperCase() + userRole.slice(1)} ID`}
+                  onClick={() => {
+                    setLoginType('id');
+                    setLoginId('');
+                  }}
+                  color={loginType === 'id' ? 'primary' : 'default'}
+                  variant={loginType === 'id' ? 'filled' : 'outlined'}
+                />
+              </Stack>
+            </Box>
+          )}
+
+          {/* Login ID Field */}
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="loginId"
+            label={loginType === 'email' ? 'Email Address' : `${userRole.charAt(0).toUpperCase() + userRole.slice(1)} ID`}
+            name="loginId"
+            autoComplete={loginType === 'email' ? 'email' : 'username'}
+            autoFocus={!!userRole}
+            value={loginId}
+            onChange={(e) => setLoginId(e.target.value)}
+            error={!!formErrors.loginId}
+            helperText={formErrors.loginId}
+            placeholder={getPlaceholderText()}
+            disabled={!userRole}
+            InputProps={{
+              startAdornment: userRole ? getRoleIcon(userRole) : null,
+            }}
+          />
+          
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Password"
+            type="password"
+            id="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            error={!!formErrors.password}
+            helperText={formErrors.password}
+            disabled={!userRole}
+          />
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3, mb: 2 }}
+            disabled={isLoading}
+            startIcon={isLoading ? <CircularProgress size={20} /> : <LockOutlined />}
+          >
+            {isLoading ? 'Signing in...' : 'Sign In'}
+          </Button>
+          
+          <Box sx={{ mt: 2, mb: 2 }}>
+            <Link to="/forgot-password" style={{ textDecoration: 'none' }}>
+              <Typography variant="body2" color="primary">
+                Forgot password?
+              </Typography>
+            </Link>
           </Box>
           
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 2 }}>
-              Please contact your administrator if you need assistance.
-            </Typography>
-            
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', fontSize: 12 }}>
-              Admin Access: admin@example.com / admin123
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="body2">
+              Don't have an account?{' '}
+              <Link to="/register" style={{ textDecoration: 'none' }}>
+                <Typography variant="body2" component="span" color="primary">
+                  Sign Up
+                </Typography>
+              </Link>
             </Typography>
           </Box>
-        </Paper>
-      </Box>
+        </Box>
+
+        <Divider sx={{ width: '100%', my: 3 }}>
+          <Typography variant="body2" color="text.secondary">
+            Quick Demo Login
+          </Typography>
+        </Divider>
+
+        <Box sx={{ width: '100%' }}>
+          <Stack spacing={2}>
+            <Button 
+              variant="outlined" 
+              onClick={() => {
+                setUserRole('admin');
+                setLoginType('email');
+                setLoginId('admin@school.edu');
+                setPassword('admin123');
+              }}
+              startIcon={<SupervisorAccount />}
+              fullWidth
+            >
+              Demo Admin Login
+            </Button>
+            <Stack direction="row" spacing={1}>
+              <Button 
+                variant="outlined" 
+                onClick={() => {
+                  setUserRole('teacher');
+                  setLoginType('id');
+                  setLoginId('TCH001');
+                  setPassword('teacher123');
+                }}
+                startIcon={<MenuBook />}
+                size="small"
+                sx={{ flex: 1 }}
+              >
+                Teacher Demo
+              </Button>
+              <Button 
+                variant="outlined" 
+                onClick={() => {
+                  setUserRole('student');
+                  setLoginType('id');
+                  setLoginId('STU001');
+                  setPassword('student123');
+                }}
+                startIcon={<Person />}
+                size="small"
+                sx={{ flex: 1 }}
+              >
+                Student Demo
+              </Button>
+            </Stack>
+          </Stack>
+        </Box>
+      </Paper>
     </Container>
   );
 };

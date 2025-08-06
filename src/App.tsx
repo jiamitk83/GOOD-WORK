@@ -1,238 +1,89 @@
-import React, { useContext, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { 
   AppBar, 
   Toolbar, 
   Typography, 
-  Container, 
-  Grid, 
-  Card, 
-  CardContent, 
-  CardActions, 
+  Box, 
   Button,
-  Box,
   IconButton,
   Menu,
   MenuItem,
-  Paper
+  Avatar,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider
 } from '@mui/material';
 import { 
   School, 
-  Person, 
-  MenuBook, 
-  Assignment, 
+  Menu as MenuIcon,
+  Dashboard as DashboardIcon,
+  Person,
+  MenuBook,
+  Assignment,
   Grade,
-  AdminPanelSettings,
-  AccountCircle,
-  Payments,
-  People,
-  Schedule
+  Settings,
+  Logout,
+  Language
 } from '@mui/icons-material';
-import Students from './components/Students';
-import AdminPanel from './components/AdminPanel';
+import { useState } from 'react';
+
+// Import components
 import Login from './components/Login';
 import Register from './components/Register';
 import ForgotPassword from './components/ForgotPassword';
+import Dashboard from './components/Dashboard';
+import SimpleBrowser from './components/SimpleBrowser';
+import Students from './components/Students';
 import Teachers from './components/Teachers';
+import RolesManagement from './components/RolesManagement';
 import Courses from './components/Courses';
-import Attendance from './components/Attendance';
-import Grades from './components/Grades';
-import FeesManagement from './components/FeesManagement';
-import ParentsManagement from './components/ParentsManagement';
-import TimeTable from './components/TimeTable';
-import { AuthContext, AuthProvider } from './context/AuthContext';
+import UserApprovalManagement from './components/UserApprovalManagement';
 
-const Dashboard = () => {
-  const { user, hasEditPermission } = useContext(AuthContext);
-  const canEdit = hasEditPermission();
+// Import AuthProvider and useAuth
+import AuthProvider from './context/AuthContext';
+import { useAuth } from './context/useAuth';
+
+// Protected Route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isLoading } = useAuth();
   
-  return (
-    <Container>
-      <Typography variant="h4" gutterBottom>
-        School ERP Dashboard
-        {user && (
-          <Typography variant="subtitle1" component="span" sx={{ ml: 2 }}>
-            Welcome, {user.name} ({user.role})
-          </Typography>
-        )}
-      </Typography>
-      
-      {!canEdit && (
-        <Paper sx={{ p: 2, mb: 3, bgcolor: 'info.light', color: 'info.contrastText' }}>
-          <Typography>
-            As a {user?.role}, you have read-only access to the system. You can view information but cannot make changes.
-          </Typography>
-        </Paper>
-      )}
-      
-      <Grid container spacing={3}>
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <School color="primary" sx={{ fontSize: 40 }} />
-              <Typography variant="h6">Students</Typography>
-              <Typography>Manage student records</Typography>
-            </CardContent>
-            <CardActions>
-              <Button 
-                size="small" 
-                component={Link} 
-                to="/students"
-              >
-                {canEdit ? "Manage Students" : "View Students"}
-              </Button>
-            </CardActions>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <Person color="primary" sx={{ fontSize: 40 }} />
-              <Typography variant="h6">Teachers</Typography>
-              <Typography>Manage teacher profiles</Typography>
-            </CardContent>
-            <CardActions>
-              <Button 
-                size="small"
-                component={Link}
-                to="/teachers"
-              >
-                {canEdit ? "Manage Teachers" : "View Teachers"}
-              </Button>
-            </CardActions>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <MenuBook color="primary" sx={{ fontSize: 40 }} />
-              <Typography variant="h6">Courses</Typography>
-              <Typography>Manage course catalog</Typography>
-            </CardContent>
-            <CardActions>
-              <Button 
-                size="small"
-                component={Link}
-                to="/courses"
-              >
-                {canEdit ? "Manage Courses" : "View Courses"}
-              </Button>
-            </CardActions>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <Assignment color="primary" sx={{ fontSize: 40 }} />
-              <Typography variant="h6">Attendance</Typography>
-              <Typography>Track attendance records</Typography>
-            </CardContent>
-            <CardActions>
-              <Button 
-                size="small"
-                component={Link}
-                to="/attendance"
-              >
-                {canEdit ? "Manage Attendance" : "View Attendance"}
-              </Button>
-            </CardActions>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <Grade color="primary" sx={{ fontSize: 40 }} />
-              <Typography variant="h6">Grades</Typography>
-              <Typography>Manage student grades</Typography>
-            </CardContent>
-            <CardActions>
-              <Button 
-                size="small"
-                component={Link}
-                to="/grades"
-              >
-                {canEdit ? "Manage Grades" : "View Grades"}
-              </Button>
-            </CardActions>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <Payments color="primary" sx={{ fontSize: 40 }} />
-              <Typography variant="h6">Fees Management</Typography>
-              <Typography>Manage student fees</Typography>
-            </CardContent>
-            <CardActions>
-              <Button 
-                size="small"
-                component={Link}
-                to="/fees"
-              >
-                {canEdit ? "Manage Fees" : "View Fees"}
-              </Button>
-            </CardActions>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <People color="primary" sx={{ fontSize: 40 }} />
-              <Typography variant="h6">Parents</Typography>
-              <Typography>Manage parent information</Typography>
-            </CardContent>
-            <CardActions>
-              <Button 
-                size="small"
-                component={Link}
-                to="/parents"
-              >
-                {canEdit ? "Manage Parents" : "View Parents"}
-              </Button>
-            </CardActions>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <Schedule color="primary" sx={{ fontSize: 40 }} />
-              <Typography variant="h6">Time Table</Typography>
-              <Typography>Manage school schedules</Typography>
-            </CardContent>
-            <CardActions>
-              <Button 
-                size="small"
-                component={Link}
-                to="/timetable"
-              >
-                {canEdit ? "Manage Time Table" : "View Time Table"}
-              </Button>
-            </CardActions>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <AdminPanelSettings color="primary" sx={{ fontSize: 40 }} />
-              <Typography variant="h6">Admin Panel</Typography>
-              <Typography>System administration</Typography>
-            </CardContent>
-            <CardActions>
-              {canEdit ? (
-                <Button size="small" component={Link} to="/admin">Access Admin Panel</Button>
-              ) : (
-                <Button size="small" disabled>Admin Access Only</Button>
-              )}
-            </CardActions>
-          </Card>
-        </Grid>
-      </Grid>
-    </Container>
-  );
+  if (isLoading) {
+    return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Typography>Loading...</Typography>
+    </Box>;
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  return <>{children}</>;
 };
 
-const AppContent = () => {
-  const { user, isAuthenticated, logout } = useContext(AuthContext);
+// Admin Route component
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Typography>Loading...</Typography>
+    </Box>;
+  }
+  
+  if (user?.role !== 'admin') {
+    return <Navigate to="/dashboard" />;
+  }
+  
+  return <>{children}</>;
+};
+
+// Navigation component
+const Navigation = () => {
+  const { user, logout } = useAuth();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -242,171 +93,189 @@ const AppContent = () => {
   const handleClose = () => {
     setAnchorEl(null);
   };
-
+  
   const handleLogout = () => {
-    handleClose();
     logout();
-  };
-
-  // Protected route component
-  const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-    if (!isAuthenticated) {
-      return <Navigate to="/login" replace />;
-    }
-    return children;
-  };
-
-  // Admin-only route component
-  const AdminRoute = ({ children }: { children: JSX.Element }) => {
-    if (!isAuthenticated || user?.role !== 'admin') {
-      console.log('Unauthorized access attempt to admin route');
-      return <Navigate to="/" replace />;
-    }
-    return children;
+    handleClose();
   };
   
-  // Read-only route component for students and teachers
-  const ReadOnlyRoute = ({ children }: { children: JSX.Element }) => {
-    const { hasEditPermission } = useContext(AuthContext);
-    const childrenWithProps = React.cloneElement(children, { readOnly: !hasEditPermission() });
-    return (
-      <ProtectedRoute>
-        {childrenWithProps}
-      </ProtectedRoute>
-    );
+  const toggleDrawer = () => {
+    setDrawerOpen(!drawerOpen);
   };
+  
+  const menuItems = [
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+    { text: 'Students', icon: <Person />, path: '/students' },
+    { text: 'Teachers', icon: <Person />, path: '/teachers' },
+    { text: 'Courses', icon: <MenuBook />, path: '/courses' },
+    { text: 'Attendance', icon: <Assignment />, path: '/attendance' },
+    { text: 'Grades', icon: <Grade />, path: '/grades' },
+    { text: 'Browser', icon: <Language />, path: '/browser' },
+    { text: 'Admin Panel', icon: <Settings />, path: '/admin', adminOnly: true },
+  ];
   
   return (
-    <Router>
-      <Box sx={{ flexGrow: 1 }}>
-        <AppBar position="static">
-          <Toolbar>
-            <School sx={{ mr: 2 }} />
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+    <>
+      <AppBar position="static">
+        <Toolbar>
+          {user && (
+            <IconButton
+              size="large"
+              edge="start"
+              color="inherit"
+              aria-label="menu"
+              onClick={toggleDrawer}
+              sx={{ mr: 2 }}
+            >
+              <MenuIcon />
+            </IconButton>
+          )}
+          
+          <School sx={{ mr: 2 }} />
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
               School ERP System
-            </Typography>
-            
-            {isAuthenticated ? (
-              <>
-                <Button color="inherit" component={Link} to="/">Dashboard</Button>
-                {user?.role === 'admin' && (
-                  <Button color="inherit" component={Link} to="/admin">Admin</Button>
+            </Link>
+          </Typography>
+          
+          {user ? (
+            <div>
+              <IconButton
+                size="large"
+                aria-label="account of current user"
+                aria-controls="menu-appbar"
+                aria-haspopup="true"
+                onClick={handleMenu}
+                color="inherit"
+              >
+                <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
+                  {user.name[0].toUpperCase()}
+                </Avatar>
+              </IconButton>
+              <Menu
+                id="menu-appbar"
+                anchorEl={anchorEl}
+                anchorOrigin={{
+                  vertical: 'bottom',
+                  horizontal: 'right',
+                }}
+                keepMounted
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
+                open={Boolean(anchorEl)}
+                onClose={handleClose}
+              >
+                <MenuItem disabled>
+                  <Typography variant="body2">
+                    Signed in as <strong>{user.name}</strong>
+                  </Typography>
+                </MenuItem>
+                <Divider />
+                <MenuItem onClick={handleClose} component={Link} to="/dashboard">Dashboard</MenuItem>
+                <MenuItem onClick={handleClose} component={Link} to="/profile">Profile</MenuItem>
+                {user.role === 'admin' && (
+                  <MenuItem onClick={handleClose} component={Link} to="/admin">Admin Panel</MenuItem>
                 )}
-                <IconButton
-                  size="large"
-                  aria-label="account of current user"
-                  aria-controls="menu-appbar"
-                  aria-haspopup="true"
-                  onClick={handleMenu}
-                  color="inherit"
-                >
-                  <AccountCircle />
-                </IconButton>
-                <Menu
-                  id="menu-appbar"
-                  anchorEl={anchorEl}
-                  anchorOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                  }}
-                  keepMounted
-                  transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                  }}
-                  open={Boolean(anchorEl)}
-                  onClose={handleClose}
-                >
-                  <MenuItem onClick={handleClose}>Profile</MenuItem>
-                  <MenuItem onClick={handleLogout}>Logout</MenuItem>
-                </Menu>
-              </>
-            ) : (
-              <>
-                <Button color="inherit" component={Link} to="/login">Login</Button>
-                <Button color="inherit" component={Link} to="/register">Register</Button>
-              </>
-            )}
-          </Toolbar>
-        </AppBar>
-        
-        <Box sx={{ mt: 3 }}>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/students" element={
-              <ReadOnlyRoute>
-                <Students />
-              </ReadOnlyRoute>
-            } />
-            
-            <Route path="/admin" element={
-              <AdminRoute>
-                <AdminPanel />
-              </AdminRoute>
-            } />
-            
-            <Route path="/teachers" element={
-              <ReadOnlyRoute>
-                <Teachers />
-              </ReadOnlyRoute>
-            } />
-            
-            <Route path="/courses" element={
-              <ReadOnlyRoute>
-                <Courses />
-              </ReadOnlyRoute>
-            } />
-            
-            <Route path="/attendance" element={
-              <ReadOnlyRoute>
-                <Attendance />
-              </ReadOnlyRoute>
-            } />
-            
-            <Route path="/grades" element={
-              <ReadOnlyRoute>
-                <Grades />
-              </ReadOnlyRoute>
-            } />
-            
-            <Route path="/fees" element={
-              <ReadOnlyRoute>
-                <FeesManagement />
-              </ReadOnlyRoute>
-            } />
-            
-            <Route path="/parents" element={
-              <ReadOnlyRoute>
-                <ParentsManagement />
-              </ReadOnlyRoute>
-            } />
-            
-            <Route path="/timetable" element={
-              <ReadOnlyRoute>
-                <TimeTable />
-              </ReadOnlyRoute>
-            } />
-          </Routes>
+                <Divider />
+                <MenuItem onClick={handleLogout}>
+                  <ListItemIcon>
+                    <Logout fontSize="small" />
+                  </ListItemIcon>
+                  Logout
+                </MenuItem>
+              </Menu>
+            </div>
+          ) : (
+            <>
+              <Button color="inherit" component={Link} to="/login">Login</Button>
+              <Button color="inherit" component={Link} to="/register">Register</Button>
+            </>
+          )}
+        </Toolbar>
+      </AppBar>
+      
+      <Drawer
+        anchor="left"
+        open={drawerOpen}
+        onClose={toggleDrawer}
+      >
+        <Box
+          sx={{ width: 250 }}
+          role="presentation"
+          onClick={toggleDrawer}
+        >
+          <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
+            <School sx={{ mr: 1 }} />
+            <Typography variant="h6">School ERP</Typography>
+          </Box>
+          <Divider />
+          <List>
+            {menuItems.map((item) => (
+              (!item.adminOnly || user?.role === 'admin') && (
+                <ListItem button key={item.text} component={Link} to={item.path}>
+                  <ListItemIcon>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItem>
+              )
+            ))}
+          </List>
         </Box>
-      </Box>
-    </Router>
+      </Drawer>
+    </>
   );
 };
 
+function AppContent() {
+  const { isAuthenticated } = useAuth();
+  
+  return (
+    <>
+      <Navigation />
+      
+      <Box sx={{ mt: 3, px: 3 }}>
+        <Routes>
+          <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
+          <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
+          <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/dashboard" />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          
+          {/* Protected routes */}
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/browser" element={<ProtectedRoute><SimpleBrowser /></ProtectedRoute>} />
+          
+          {/* Placeholder routes for future implementation */}
+          <Route path="/students" element={<ProtectedRoute><Students /></ProtectedRoute>} />
+          <Route path="/teachers" element={<ProtectedRoute><Teachers /></ProtectedRoute>} />
+          <Route path="/courses" element={<ProtectedRoute><Courses /></ProtectedRoute>} />
+          <Route path="/attendance" element={<ProtectedRoute><div>Attendance Component - Coming Soon</div></ProtectedRoute>} />
+          <Route path="/grades" element={<ProtectedRoute><div>Grades Component - Coming Soon</div></ProtectedRoute>} />
+          <Route path="/timetable" element={<ProtectedRoute><div>TimeTable Component - Coming Soon</div></ProtectedRoute>} />
+          
+          {/* Admin routes */}
+          <Route path="/admin" element={<AdminRoute><div>Admin Panel - Coming Soon</div></AdminRoute>} />
+          <Route path="/admin/user-approvals" element={<AdminRoute><UserApprovalManagement /></AdminRoute>} />
+          <Route path="/roles" element={<AdminRoute><RolesManagement /></AdminRoute>} />
+          <Route path="/school-setup/*" element={<AdminRoute><div>School Setup - Coming Soon</div></AdminRoute>} />
+          
+          {/* Fallback route */}
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Box>
+    </>
+  );
+}
+
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </Router>
   );
 }
 
