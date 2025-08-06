@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import { School, LockOutlined, Person, SupervisorAccount, MenuBook } from '@mui/icons-material';
 import { useAuth } from '../context/useAuth';
+import { useResponsive } from '../utils/responsive';
 
 const Login: React.FC = () => {
   const [loginType, setLoginType] = useState('email'); // 'email' or 'id'
@@ -29,6 +30,7 @@ const Login: React.FC = () => {
   
   const { login, isLoading, error } = useAuth();
   const navigate = useNavigate();
+  const { isMobile } = useResponsive();
 
   const validateForm = (): boolean => {
     const errors: { loginId?: string; password?: string; userRole?: string } = {};
@@ -101,13 +103,34 @@ const Login: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 8 }}>
-      <Paper elevation={3} sx={{ p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <School sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
-        <Typography variant="h4" component="h1" gutterBottom>
+    <Container 
+      maxWidth="sm" 
+      sx={{ 
+        mt: isMobile ? 4 : 8,
+        px: isMobile ? 2 : 3,
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+      <Paper 
+        elevation={isMobile ? 0 : 3} 
+        sx={{ 
+          p: isMobile ? 3 : 4, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center',
+          width: '100%',
+          maxWidth: isMobile ? '100%' : 500,
+          bgcolor: isMobile ? 'transparent' : 'background.paper'
+        }}
+      >
+        <School sx={{ fontSize: isMobile ? 32 : 40, color: 'primary.main', mb: 2 }} />
+        <Typography variant={isMobile ? "h5" : "h4"} component="h1" gutterBottom align="center">
           School ERP System
         </Typography>
-        <Typography variant="subtitle1" gutterBottom color="text.secondary">
+        <Typography variant="subtitle1" gutterBottom color="text.secondary" align="center">
           Sign in to access your account
         </Typography>
 

@@ -30,7 +30,7 @@ import {
   Tabs,
   Tab
 } from '@mui/material';
-import { Edit, Delete, Add, Search, FilterList, BookmarkBorder } from '@mui/icons-material';
+import { Edit, Delete, Add, Search, FilterList } from '@mui/icons-material';
 import { useAuth } from '../context/useAuth';
 
 interface TabPanelProps {

@@ -26,10 +26,9 @@ import {
   Card,
   CardContent,
   CardActions,
-  Divider,
   Tooltip
 } from '@mui/material';
-import { Add, Edit, Delete, FilterList, Book, Assignment, School } from '@mui/icons-material';
+import { Add, Edit, Delete, FilterList } from '@mui/icons-material';
 import { useAuth } from '../../context/useAuth';
 
 interface Subject {

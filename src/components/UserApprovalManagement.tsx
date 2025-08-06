@@ -31,7 +31,9 @@ import {
   FormControl,
   InputLabel,
   Checkbox,
-  TablePagination
+  TablePagination,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import {
   CheckCircle,
@@ -113,6 +115,9 @@ const UserApprovalManagement: React.FC = () => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   useEffect(() => {
     fetchUsers();
@@ -292,20 +297,118 @@ const UserApprovalManagement: React.FC = () => {
     );
   };
 
+  // Mobile User Card Component
+  const renderMobileUserCard = (user: User) => (
+    <Card key={user._id} sx={{ mb: 2 }}>
+      <CardContent sx={{ p: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+          <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+            {getUserIcon(user.userType)}
+          </Avatar>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography variant="subtitle1" noWrap>
+              {user.firstName} {user.lastName}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              @{user.username}
+            </Typography>
+            <Box sx={{ mt: 0.5 }}>
+              <Chip
+                icon={getUserIcon(user.userType)}
+                label={user.userType.charAt(0).toUpperCase() + user.userType.slice(1)}
+                size="small"
+                variant="outlined"
+                sx={{ mr: 1 }}
+              />
+              <Chip
+                label={user.approvalStatus}
+                color={getStatusColor(user.approvalStatus) as any}
+                size="small"
+              />
+            </Box>
+          </Box>
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <Email sx={{ mr: 1, fontSize: 16, color: 'text.secondary' }} />
+          <Typography variant="body2" noWrap sx={{ flexGrow: 1 }}>
+            {user.email}
+          </Typography>
+        </Box>
+        
+        {user.profile?.phone && (
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <Phone sx={{ mr: 1, fontSize: 16, color: 'text.secondary' }} />
+            <Typography variant="body2">
+              {user.profile.phone}
+            </Typography>
+          </Box>
+        )}
+        
+        <Typography variant="caption" color="text.secondary">
+          Registered: {new Date(user.createdAt).toLocaleDateString()}
+        </Typography>
+        
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+          <IconButton
+            size="small"
+            onClick={() => {
+              setSelectedUser(user);
+              setViewDialogOpen(true);
+            }}
+          >
+            <Visibility />
+          </IconButton>
+          
+          {user.approvalStatus === 'pending' && (
+            <>
+              <IconButton
+                size="small"
+                color="success"
+                onClick={() => handleApprove(user._id)}
+              >
+                <CheckCircle />
+              </IconButton>
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => {
+                  setSelectedUser(user);
+                  setRejectDialogOpen(true);
+                }}
+              >
+                <Cancel />
+              </IconButton>
+            </>
+          )}
+        </Box>
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" gutterBottom>
+    <Box sx={{ p: isMobile ? 1 : 3 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: isMobile ? 'flex-start' : 'center', 
+        mb: 3,
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? 2 : 0
+      }}>
+        <Typography variant={isMobile ? "h5" : "h4"} gutterBottom={!isMobile}>
           <AdminPanelSettings sx={{ mr: 1, verticalAlign: 'middle' }} />
           User Approval Management
         </Typography>
         <Button
           variant="outlined"
+          size={isMobile ? "small" : "medium"}
           startIcon={<Refresh />}
           onClick={() => {
             fetchUsers();
             fetchStats();
           }}
+          sx={{ alignSelf: isMobile ? 'flex-end' : 'center' }}
         >
           Refresh
         </Button>
@@ -415,159 +518,187 @@ const UserApprovalManagement: React.FC = () => {
         </Stack>
       </Paper>
 
-      {/* Users Table */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell padding="checkbox">
-                <Checkbox
-                  indeterminate={selectedUsers.length > 0 && selectedUsers.length < users.length}
-                  checked={users.length > 0 && selectedUsers.length === users.length}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedUsers(users.map(user => user._id));
-                    } else {
-                      setSelectedUsers([]);
-                    }
-                  }}
-                />
-              </TableCell>
-              <TableCell>User</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Contact</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Registration Date</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.map((user) => (
-              <TableRow key={user._id}>
+      {/* Users Table/Cards */}
+      {isMobile ? (
+        // Mobile Card View
+        <Box>
+          {users.length === 0 ? (
+            <Card>
+              <CardContent sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="h6" color="text.secondary">
+                  No users found
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Try adjusting your filters
+                </Typography>
+              </CardContent>
+            </Card>
+          ) : (
+            users.map(renderMobileUserCard)
+          )}
+        </Box>
+      ) : (
+        // Desktop Table View
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
                 <TableCell padding="checkbox">
                   <Checkbox
-                    checked={selectedUsers.includes(user._id)}
+                    indeterminate={selectedUsers.length > 0 && selectedUsers.length < users.length}
+                    checked={users.length > 0 && selectedUsers.length === users.length}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setSelectedUsers([...selectedUsers, user._id]);
+                        setSelectedUsers(users.map(user => user._id));
                       } else {
-                        setSelectedUsers(selectedUsers.filter(id => id !== user._id));
+                        setSelectedUsers([]);
                       }
                     }}
                   />
                 </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-                      {getUserIcon(user.userType)}
-                    </Avatar>
-                    <Box>
-                      <Typography variant="subtitle2">
-                        {user.firstName} {user.lastName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        @{user.username}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    icon={getUserIcon(user.userType)}
-                    label={user.userType.charAt(0).toUpperCase() + user.userType.slice(1)}
-                    size="small"
-                    variant="outlined"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Box>
-                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Email sx={{ mr: 0.5, fontSize: 16 }} />
-                      {user.email}
-                    </Typography>
-                    {user.profile?.phone && (
-                      <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Phone sx={{ mr: 0.5, fontSize: 16 }} />
-                        {user.profile.phone}
-                      </Typography>
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={user.approvalStatus}
-                    color={getStatusColor(user.approvalStatus) as any}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  {new Date(user.createdAt).toLocaleDateString()}
-                </TableCell>
-                <TableCell>
-                  <Stack direction="row" spacing={1}>
-                    <Tooltip title="View Details">
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setViewDialogOpen(true);
-                        }}
-                      >
-                        <Visibility />
-                      </IconButton>
-                    </Tooltip>
-                    
-                    {user.approvalStatus === 'pending' && (
-                      <>
-                        <Tooltip title="Approve">
-                          <IconButton
-                            size="small"
-                            color="success"
-                            onClick={() => handleApprove(user._id)}
-                          >
-                            <CheckCircle />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Reject">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setRejectDialogOpen(true);
-                            }}
-                          >
-                            <Cancel />
-                          </IconButton>
-                        </Tooltip>
-                      </>
-                    )}
-                  </Stack>
-                </TableCell>
+                <TableCell>User</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Contact</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Registration Date</TableCell>
+                <TableCell>Actions</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        
-        <TablePagination
-          component="div"
-          count={-1}
-          page={page}
-          onPageChange={(_, newPage) => setPage(newPage)}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={(e) => {
-            setRowsPerPage(parseInt(e.target.value, 10));
-            setPage(0);
-          }}
-        />
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user._id}>
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={selectedUsers.includes(user._id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedUsers([...selectedUsers, user._id]);
+                        } else {
+                          setSelectedUsers(selectedUsers.filter(id => id !== user._id));
+                        }
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                        {getUserIcon(user.userType)}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="subtitle2">
+                          {user.firstName} {user.lastName}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          @{user.username}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      icon={getUserIcon(user.userType)}
+                      label={user.userType.charAt(0).toUpperCase() + user.userType.slice(1)}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Email sx={{ mr: 0.5, fontSize: 16 }} />
+                        {user.email}
+                      </Typography>
+                      {user.profile?.phone && (
+                        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Phone sx={{ mr: 0.5, fontSize: 16 }} />
+                          {user.profile.phone}
+                        </Typography>
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={user.approvalStatus}
+                      color={getStatusColor(user.approvalStatus) as any}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={1}>
+                      <Tooltip title="View Details">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setViewDialogOpen(true);
+                          }}
+                        >
+                          <Visibility />
+                        </IconButton>
+                      </Tooltip>
+                      
+                      {user.approvalStatus === 'pending' && (
+                        <>
+                          <Tooltip title="Approve">
+                            <IconButton
+                              size="small"
+                              color="success"
+                              onClick={() => handleApprove(user._id)}
+                            >
+                              <CheckCircle />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Reject">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setRejectDialogOpen(true);
+                              }}
+                            >
+                              <Cancel />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          
+          <TablePagination
+            component="div"
+            count={-1}
+            page={page}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+          />
+        </TableContainer>
+      )}
 
       {/* View User Dialog */}
       <Dialog
         open={viewDialogOpen}
         onClose={() => setViewDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
+        maxWidth={isMobile ? false : "md"}
+        fullWidth={!isMobile}
+        fullScreen={isMobile}
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: isMobile ? 0 : 32,
+            borderRadius: isMobile ? 0 : 8
+          }
+        }}
       >
         <DialogTitle>
           User Details
@@ -583,8 +714,10 @@ const UserApprovalManagement: React.FC = () => {
         <DialogContent>
           {selectedUser && renderUserDetails(selectedUser)}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
+        <DialogActions sx={{ flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 1 : 0 }}>
+          <Button onClick={() => setViewDialogOpen(false)} fullWidth={isMobile}>
+            Close
+          </Button>
           {selectedUser?.approvalStatus === 'pending' && (
             <>
               <Button
@@ -595,6 +728,7 @@ const UserApprovalManagement: React.FC = () => {
                   handleApprove(selectedUser._id);
                   setViewDialogOpen(false);
                 }}
+                fullWidth={isMobile}
               >
                 Approve
               </Button>
@@ -606,6 +740,7 @@ const UserApprovalManagement: React.FC = () => {
                   setViewDialogOpen(false);
                   setRejectDialogOpen(true);
                 }}
+                fullWidth={isMobile}
               >
                 Reject
               </Button>
@@ -618,8 +753,15 @@ const UserApprovalManagement: React.FC = () => {
       <Dialog
         open={rejectDialogOpen}
         onClose={() => setRejectDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
+        maxWidth={isMobile ? false : "sm"}
+        fullWidth={!isMobile}
+        fullScreen={isMobile}
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: isMobile ? 0 : 32,
+            borderRadius: isMobile ? 0 : 8
+          }
+        }}
       >
         <DialogTitle>Reject User Registration</DialogTitle>
         <DialogContent>
@@ -636,21 +778,28 @@ const UserApprovalManagement: React.FC = () => {
             label="Rejection Reason"
             fullWidth
             multiline
-            rows={3}
+            rows={isMobile ? 4 : 3}
             variant="outlined"
             value={rejectionReason}
             onChange={(e) => setRejectionReason(e.target.value)}
             placeholder="Please provide a reason for rejection..."
             required
+            size={isMobile ? "small" : "medium"}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
+        <DialogActions sx={{ flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 1 : 0, p: isMobile ? 2 : 1 }}>
+          <Button 
+            onClick={() => setRejectDialogOpen(false)}
+            fullWidth={isMobile}
+          >
+            Cancel
+          </Button>
           <Button
             variant="contained"
             color="error"
             onClick={handleReject}
             disabled={!rejectionReason.trim()}
+            fullWidth={isMobile}
           >
             Reject User
           </Button>

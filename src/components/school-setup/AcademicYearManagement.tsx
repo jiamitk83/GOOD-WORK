@@ -26,7 +26,7 @@ import {
   Switch,
   FormControlLabel
 } from '@mui/material';
-import { Add, Edit, Delete, Event } from '@mui/icons-material';
+import { Add, Edit, Delete } from '@mui/icons-material';
 import { useAuth } from '../../context/useAuth';
 
 interface AcademicYear {
