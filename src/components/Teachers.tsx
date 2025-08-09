@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -156,12 +156,47 @@ const sampleTeachers: Teacher[] = [
 
 const Teachers: React.FC = () => {
   const { user, checkPermission } = useAuth();
-  const [teachers, setTeachers] = useState<Teacher[]>(sampleTeachers);
+  
+  // Initialize teachers state with sample data only once
+  const [teachers, setTeachers] = useState<Teacher[]>(() => {
+    // Check if there's saved data in localStorage
+    const savedTeachers = localStorage.getItem('teachers');
+    if (savedTeachers) {
+      try {
+        return JSON.parse(savedTeachers);
+      } catch (error) {
+        console.error('Error parsing saved teachers:', error);
+      }
+    }
+    // Return initial sample data if no saved data
+    return sampleTeachers;
+  });
+  
   const [tabValue, setTabValue] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSubject, setFilterSubject] = useState('');
+
+  // Form state for dialog
+  const [formData, setFormData] = useState({
+    name: '',
+    employeeId: '',
+    gender: '',
+    dateOfJoining: '',
+    qualification: '',
+    specialization: '',
+    contactNumber: '',
+    email: '',
+    address: '',
+    subjects: [] as string[],
+    classes: [] as string[]
+  });
+
+  // Save teachers to localStorage whenever teachers state changes
+  useEffect(() => {
+    localStorage.setItem('teachers', JSON.stringify(teachers));
+  }, [teachers]);
 
   // Check permissions
   const canManageTeachers = user?.role === 'admin' || checkPermission('manage_teachers');
@@ -181,8 +216,34 @@ const Teachers: React.FC = () => {
   const handleOpenDialog = (teacher?: Teacher) => {
     if (teacher) {
       setSelectedTeacher(teacher);
+      setFormData({
+        name: teacher.name,
+        employeeId: teacher.employeeId,
+        gender: teacher.gender,
+        dateOfJoining: teacher.dateOfJoining,
+        qualification: teacher.qualification,
+        specialization: teacher.specialization,
+        contactNumber: teacher.contactNumber,
+        email: teacher.email,
+        address: teacher.address,
+        subjects: teacher.subjects,
+        classes: teacher.classes
+      });
     } else {
       setSelectedTeacher(null);
+      setFormData({
+        name: '',
+        employeeId: '',
+        gender: '',
+        dateOfJoining: '',
+        qualification: '',
+        specialization: '',
+        contactNumber: '',
+        email: '',
+        address: '',
+        subjects: [],
+        classes: []
+      });
     }
     setOpenDialog(true);
   };
@@ -193,17 +254,42 @@ const Teachers: React.FC = () => {
 
   // Handle teacher form submit
   const handleSaveTeacher = () => {
-    // In a real app, we would save the teacher data
-    // and then update the state
-
-    // For demo purposes, just close the dialog
+    // Validate form
+    if (!formData.name || !formData.employeeId || !formData.qualification) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    if (selectedTeacher) {
+      // Update existing teacher
+      const updatedTeachers = teachers.map(teacher =>
+        teacher.id === selectedTeacher.id
+          ? { ...teacher, ...formData }
+          : teacher
+      );
+      setTeachers(updatedTeachers);
+      alert('Teacher updated successfully!');
+    } else {
+      // Add new teacher
+      const newTeacher: Teacher = {
+        id: Date.now().toString(),
+        ...formData,
+        status: 'active'
+      };
+      setTeachers([...teachers, newTeacher]);
+      alert('Teacher added successfully!');
+    }
+    
     handleCloseDialog();
   };
 
   // Handle teacher deletion
   const handleDeleteTeacher = (id: string) => {
     // In a real app, we would confirm deletion first
-    setTeachers(teachers.filter(teacher => teacher.id !== id));
+    if (window.confirm('Are you sure you want to delete this teacher?')) {
+      setTeachers(teachers.filter(teacher => teacher.id !== id));
+      alert('Teacher deleted successfully!');
+    }
   };
 
   // Apply filters
@@ -234,16 +320,33 @@ const Teachers: React.FC = () => {
         <Typography variant="h4" gutterBottom>
           Teacher Management
         </Typography>
-        {canManageTeachers && (
-          <Button 
-            variant="contained" 
-            color="primary" 
-            startIcon={<Add />}
-            onClick={() => handleOpenDialog()}
-          >
-            Add New Teacher
-          </Button>
-        )}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {canManageTeachers && (
+            <>
+              <Button 
+                variant="outlined" 
+                color="secondary"
+                onClick={() => {
+                  if (window.confirm('Reset to original sample data? This will remove all changes.')) {
+                    setTeachers(sampleTeachers);
+                    localStorage.removeItem('teachers');
+                    alert('Data reset to original sample data!');
+                  }
+                }}
+              >
+                Reset Data
+              </Button>
+              <Button 
+                variant="contained" 
+                color="primary" 
+                startIcon={<Add />}
+                onClick={() => handleOpenDialog()}
+              >
+                Add New Teacher
+              </Button>
+            </>
+          )}
+        </Box>
       </Box>
 
       {/* Search and Filter Section */}
@@ -546,33 +649,128 @@ const Teachers: React.FC = () => {
         </Grid>
       </TabPanel>
 
-      {/* Add/Edit Teacher Dialog (simplified) */}
+      {/* Add/Edit Teacher Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>{selectedTeacher ? 'Edit Teacher' : 'Add New Teacher'}</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            This is a placeholder form. In a real application, this would be a complete form to add or edit teacher details.
-          </Typography>
-          <Grid container spacing={2}>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Teacher Name"
+                label="Teacher Name *"
                 variant="outlined"
-                defaultValue={selectedTeacher?.name || ''}
-                margin="normal"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Employee ID"
+                label="Employee ID *"
                 variant="outlined"
-                defaultValue={selectedTeacher?.employeeId || ''}
-                margin="normal"
+                value={formData.employeeId}
+                onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
               />
             </Grid>
-            {/* Additional form fields would go here */}
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Gender</InputLabel>
+                <Select
+                  value={formData.gender}
+                  label="Gender"
+                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                >
+                  <MenuItem value="Male">Male</MenuItem>
+                  <MenuItem value="Female">Female</MenuItem>
+                  <MenuItem value="Other">Other</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Date of Joining"
+                type="date"
+                variant="outlined"
+                value={formData.dateOfJoining}
+                onChange={(e) => setFormData({ ...formData, dateOfJoining: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Qualification *"
+                variant="outlined"
+                value={formData.qualification}
+                onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Specialization"
+                variant="outlined"
+                value={formData.specialization}
+                onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Contact Number"
+                variant="outlined"
+                value={formData.contactNumber}
+                onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Email"
+                type="email"
+                variant="outlined"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Address"
+                variant="outlined"
+                multiline
+                rows={2}
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Subjects (comma-separated)"
+                variant="outlined"
+                placeholder="e.g. Mathematics, Physics, Chemistry"
+                value={formData.subjects.join(', ')}
+                onChange={(e) => setFormData({ 
+                  ...formData, 
+                  subjects: e.target.value.split(',').map(s => s.trim()).filter(s => s) 
+                })}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Classes (comma-separated)"
+                variant="outlined"
+                placeholder="e.g. 9, 10, 11, 12"
+                value={formData.classes.join(', ')}
+                onChange={(e) => setFormData({ 
+                  ...formData, 
+                  classes: e.target.value.split(',').map(s => s.trim()).filter(s => s) 
+                })}
+              />
+            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>

@@ -26,7 +26,9 @@ import {
   Grade,
   Settings,
   Logout,
-  Language
+  Language,
+  Schedule,
+  MonetizationOn
 } from '@mui/icons-material';
 import { useState } from 'react';
 
@@ -41,6 +43,11 @@ import Teachers from './components/Teachers';
 import RolesManagement from './components/RolesManagement';
 import Courses from './components/Courses';
 import UserApprovalManagement from './components/UserApprovalManagement';
+import TimeTable from './components/TimeTable';
+import Attendance from './components/Attendance';
+import Grades from './components/Grades';
+import SchoolSetup from './components/SchoolSetup';
+import FeesManagement from './components/FeesManagement';
 
 // Import AuthProvider and useAuth
 import AuthProvider from './context/AuthContext';
@@ -108,8 +115,10 @@ const Navigation = () => {
     { text: 'Students', icon: <Person />, path: '/students' },
     { text: 'Teachers', icon: <Person />, path: '/teachers' },
     { text: 'Courses', icon: <MenuBook />, path: '/courses' },
+    { text: 'TimeTable', icon: <Schedule />, path: '/timetable' },
     { text: 'Attendance', icon: <Assignment />, path: '/attendance' },
     { text: 'Grades', icon: <Grade />, path: '/grades' },
+    { text: 'Fees', icon: <MonetizationOn />, path: '/fees' },
     { text: 'Browser', icon: <Language />, path: '/browser' },
     { text: 'Admin Panel', icon: <Settings />, path: '/admin', adminOnly: true },
   ];
@@ -251,15 +260,16 @@ function AppContent() {
           <Route path="/students" element={<ProtectedRoute><Students /></ProtectedRoute>} />
           <Route path="/teachers" element={<ProtectedRoute><Teachers /></ProtectedRoute>} />
           <Route path="/courses" element={<ProtectedRoute><Courses /></ProtectedRoute>} />
-          <Route path="/attendance" element={<ProtectedRoute><div>Attendance Component - Coming Soon</div></ProtectedRoute>} />
-          <Route path="/grades" element={<ProtectedRoute><div>Grades Component - Coming Soon</div></ProtectedRoute>} />
-          <Route path="/timetable" element={<ProtectedRoute><div>TimeTable Component - Coming Soon</div></ProtectedRoute>} />
+          <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
+          <Route path="/grades" element={<ProtectedRoute><Grades /></ProtectedRoute>} />
+          <Route path="/fees" element={<ProtectedRoute><FeesManagement /></ProtectedRoute>} />
+          <Route path="/timetable" element={<ProtectedRoute><TimeTable /></ProtectedRoute>} />
           
           {/* Admin routes */}
           <Route path="/admin" element={<AdminRoute><div>Admin Panel - Coming Soon</div></AdminRoute>} />
           <Route path="/admin/user-approvals" element={<AdminRoute><UserApprovalManagement /></AdminRoute>} />
           <Route path="/roles" element={<AdminRoute><RolesManagement /></AdminRoute>} />
-          <Route path="/school-setup/*" element={<AdminRoute><div>School Setup - Coming Soon</div></AdminRoute>} />
+          <Route path="/school-setup/*" element={<AdminRoute><SchoolSetup /></AdminRoute>} />
           
           {/* Fallback route */}
           <Route path="*" element={<Navigate to="/" />} />

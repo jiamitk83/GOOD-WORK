@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -81,12 +81,29 @@ const initialRoles: Role[] = [
 
 const RolesManagement: React.FC = () => {
   const { user, checkPermission } = useAuth();
-  const [roles, setRoles] = useState<Role[]>(initialRoles);
+  
+  const [roles, setRoles] = useState<Role[]>(() => {
+    const savedRoles = localStorage.getItem('roles');
+    if (savedRoles) {
+      try {
+        return JSON.parse(savedRoles);
+      } catch (error) {
+        console.error('Error parsing saved roles:', error);
+      }
+    }
+    return initialRoles;
+  });
+  
   const [open, setOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [roleName, setRoleName] = useState('');
   const [roleDescription, setRoleDescription] = useState('');
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+
+  // Save roles to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('roles', JSON.stringify(roles));
+  }, [roles]);
 
   // Check if user has permission to manage roles
   const canManageRoles = user?.role === 'admin' || checkPermission('manage_roles');

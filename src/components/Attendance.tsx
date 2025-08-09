@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -31,7 +31,18 @@ import {
   Alert,
   Card,
   CardContent,
-  Snackbar
+  Snackbar,
+  LinearProgress,
+  Badge,
+  Avatar,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  CircularProgress,
+  SpeedDial,
+  SpeedDialAction,
+  SpeedDialIcon
 } from '@mui/material';
 import { 
   CalendarMonth, 
@@ -45,13 +56,26 @@ import {
   DateRange,
   Print,
   CloudDownload,
-  Refresh
+  Refresh,
+  Analytics,
+  Schedule,
+  Group,
+  Person,
+  TrendingUp,
+  Warning,
+  CheckCircle,
+  Cancel,
+  AccessTime,
+  EventBusy,
+  Send,
+  ViewList
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
 import { useAuth } from '../context/useAuth';
+import { attendanceService, AttendanceRecord, Student, AttendanceStats, ClassAttendanceStats } from '../services/AttendanceService';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -79,26 +103,6 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-interface Student {
-  id: string;
-  rollNo: string;
-  name: string;
-  status: 'present' | 'absent' | 'late' | 'leave' | '';
-  remark: string;
-}
-
-interface AttendanceData {
-  date: Date;
-  class: string;
-  section: string;
-  totalStudents: number;
-  present: number;
-  absent: number;
-  late: number;
-  leave: number;
-  students: Student[];
-}
-
 // Sample classes and sections
 const classes = ['8', '9', '10', '11', '12'];
 const sections = {
@@ -109,81 +113,23 @@ const sections = {
   '12': ['Science', 'Commerce', 'Arts']
 };
 
-// Sample students data
-const generateStudents = (count: number): Student[] => {
-  const students: Student[] = [];
-  for (let i = 1; i <= count; i++) {
-    students.push({
-      id: `s${i}`,
-      rollNo: `R${i.toString().padStart(3, '0')}`,
-      name: `Student ${i}`,
-      status: '',
-      remark: ''
-    });
-  }
-  return students;
-};
-
-// Sample attendance records
-const sampleAttendanceRecords: AttendanceData[] = [
-  {
-    date: new Date(2023, 7, 5), // August 5, 2023
-    class: '9',
-    section: 'B',
-    totalStudents: 40,
-    present: 35,
-    absent: 3,
-    late: 1,
-    leave: 1,
-    students: generateStudents(40).map((student, index) => {
-      if (index < 35) {
-        return { ...student, status: 'present' };
-      } else if (index < 38) {
-        return { ...student, status: 'absent' };
-      } else if (index < 39) {
-        return { ...student, status: 'late', remark: 'Bus delay' };
-      } else {
-        return { ...student, status: 'leave', remark: 'Medical leave' };
-      }
-    })
-  },
-  {
-    date: new Date(2023, 7, 4), // August 4, 2023
-    class: '9',
-    section: 'B',
-    totalStudents: 40,
-    present: 38,
-    absent: 1,
-    late: 1,
-    leave: 0,
-    students: generateStudents(40)
-  },
-  {
-    date: new Date(2023, 7, 3), // August 3, 2023
-    class: '10',
-    section: 'A',
-    totalStudents: 35,
-    present: 32,
-    absent: 2,
-    late: 0,
-    leave: 1,
-    students: generateStudents(35)
-  }
-];
-
 const Attendance: React.FC = () => {
   const { user, checkPermission } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceData[]>(sampleAttendanceRecords);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [editMode, setEditMode] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [openCalendarDialog, setOpenCalendarDialog] = useState(false);
   const [openReportDialog, setOpenReportDialog] = useState(false);
+  const [openStatsDialog, setOpenStatsDialog] = useState(false);
   const [reportStartDate, setReportStartDate] = useState<Date | null>(new Date());
   const [reportEndDate, setReportEndDate] = useState<Date | null>(new Date());
+  const [classStats, setClassStats] = useState<ClassAttendanceStats | null>(null);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -193,6 +139,109 @@ const Attendance: React.FC = () => {
   // Check permissions
   const canTakeAttendance = user?.role === 'admin' || checkPermission('take_attendance');
   const canViewAttendance = user?.role === 'admin' || checkPermission('view_attendance');
+  const canManageAttendance = user?.role === 'admin' || checkPermission('manage_attendance');
+
+  // Load attendance records on component mount
+  useEffect(() => {
+    loadAttendanceRecords();
+  }, []);
+
+  // Load students when class and section change
+  useEffect(() => {
+    if (selectedClass && selectedSection) {
+      loadStudents();
+    }
+  }, [selectedClass, selectedSection]);
+
+  // Load attendance data when date, class, or section changes
+  useEffect(() => {
+    if (selectedDate && selectedClass && selectedSection) {
+      loadAttendanceForDate();
+    }
+  }, [selectedDate, selectedClass, selectedSection]);
+
+  // Load attendance records
+  const loadAttendanceRecords = async () => {
+    try {
+      setLoading(true);
+      const records = await attendanceService.getAttendanceRecords();
+      setAttendanceRecords(records);
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Error loading attendance records',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load students for selected class and section
+  const loadStudents = async () => {
+    try {
+      setLoading(true);
+      const studentsData = await attendanceService.getStudentsByClass(selectedClass, selectedSection);
+      setStudents(studentsData);
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Error loading students',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load attendance for specific date
+  const loadAttendanceForDate = async () => {
+    if (!selectedDate) return;
+    
+    try {
+      setLoading(true);
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      const record = await attendanceService.getAttendanceByDate(dateStr, selectedClass, selectedSection);
+      
+      if (record) {
+        setStudents(record.students);
+        setEditMode(false);
+      } else {
+        // No existing record, prepare for new attendance
+        await loadStudents();
+        setEditMode(true);
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Error loading attendance data',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load class statistics
+  const loadClassStats = async () => {
+    if (!selectedClass || !selectedSection || !reportStartDate || !reportEndDate) return;
+    
+    try {
+      setLoading(true);
+      const startDate = reportStartDate.toISOString().split('T')[0];
+      const endDate = reportEndDate.toISOString().split('T')[0];
+      const stats = await attendanceService.getClassAttendanceStats(selectedClass, selectedSection, startDate, endDate);
+      setClassStats(stats);
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Error loading class statistics',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle tab change
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -204,41 +253,17 @@ const Attendance: React.FC = () => {
     const classValue = event.target.value;
     setSelectedClass(classValue);
     setSelectedSection('');
+    setStudents([]);
   };
 
   // Handle section change
   const handleSectionChange = (event: SelectChangeEvent) => {
     setSelectedSection(event.target.value);
-    
-    // Generate students for the selected class and section
-    if (selectedClass) {
-      // In a real app, you would fetch students from an API
-      setStudents(generateStudents(35));
-    }
   };
 
   // Handle date change
   const handleDateChange = (date: Date | null) => {
     setSelectedDate(date);
-    
-    // Check if attendance record exists for this date, class, and section
-    if (date && selectedClass && selectedSection) {
-      const existingRecord = attendanceRecords.find(
-        record => 
-          record.date.toDateString() === date.toDateString() &&
-          record.class === selectedClass &&
-          record.section === selectedSection
-      );
-      
-      if (existingRecord) {
-        setStudents(existingRecord.students);
-        setEditMode(false);
-      } else {
-        // Generate fresh student list
-        setStudents(generateStudents(35));
-        setEditMode(true);
-      }
-    }
   };
 
   // Handle student status change
@@ -260,8 +285,8 @@ const Attendance: React.FC = () => {
   };
 
   // Save attendance
-  const handleSaveAttendance = () => {
-    if (!selectedDate || !selectedClass || !selectedSection) {
+  const handleSaveAttendance = async () => {
+    if (!selectedDate || !selectedClass || !selectedSection || !user) {
       setSnackbar({
         open: true,
         message: 'Please select date, class, and section',
@@ -287,43 +312,79 @@ const Attendance: React.FC = () => {
       return;
     }
 
-    // Create new attendance record
-    const newRecord: AttendanceData = {
-      date: selectedDate,
-      class: selectedClass,
-      section: selectedSection,
-      totalStudents: students.length,
-      present: presentCount,
-      absent: absentCount,
-      late: lateCount,
-      leave: leaveCount,
-      students: [...students]
-    };
+    try {
+      setSaving(true);
+      
+      // Create attendance record
+      const record: AttendanceRecord = {
+        date: selectedDate.toISOString().split('T')[0],
+        class: selectedClass,
+        section: selectedSection,
+        totalStudents: students.length,
+        present: presentCount,
+        absent: absentCount,
+        late: lateCount,
+        leave: leaveCount,
+        students: [...students],
+        takenBy: user.email
+      };
 
-    // Check if record already exists
-    const existingRecordIndex = attendanceRecords.findIndex(
-      record => 
-        record.date.toDateString() === selectedDate.toDateString() &&
-        record.class === selectedClass &&
-        record.section === selectedSection
-    );
+      const savedRecord = await attendanceService.saveAttendance(record);
+      
+      // Update local records
+      const existingRecordIndex = attendanceRecords.findIndex(
+        r => r.date === record.date && r.class === record.class && r.section === record.section
+      );
 
-    if (existingRecordIndex >= 0) {
-      // Update existing record
-      const updatedRecords = [...attendanceRecords];
-      updatedRecords[existingRecordIndex] = newRecord;
-      setAttendanceRecords(updatedRecords);
-    } else {
-      // Add new record
-      setAttendanceRecords([...attendanceRecords, newRecord]);
+      if (existingRecordIndex >= 0) {
+        const updatedRecords = [...attendanceRecords];
+        updatedRecords[existingRecordIndex] = savedRecord;
+        setAttendanceRecords(updatedRecords);
+      } else {
+        setAttendanceRecords([...attendanceRecords, savedRecord]);
+      }
+
+      setEditMode(false);
+      setSnackbar({
+        open: true,
+        message: 'Attendance saved successfully',
+        severity: 'success'
+      });
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Error saving attendance',
+        severity: 'error'
+      });
+    } finally {
+      setSaving(false);
     }
+  };
 
-    setEditMode(false);
-    setSnackbar({
-      open: true,
-      message: 'Attendance saved successfully',
-      severity: 'success'
-    });
+  // Bulk mark all present
+  const handleMarkAllPresent = () => {
+    if (editMode) {
+      setStudents(prevStudents =>
+        prevStudents.map(student => ({
+          ...student,
+          status: 'present' as const,
+          remark: ''
+        }))
+      );
+    }
+  };
+
+  // Bulk mark all absent
+  const handleMarkAllAbsent = () => {
+    if (editMode) {
+      setStudents(prevStudents =>
+        prevStudents.map(student => ({
+          ...student,
+          status: 'absent' as const,
+          remark: ''
+        }))
+      );
+    }
   };
 
   // Handle calendar dialog
@@ -344,15 +405,101 @@ const Attendance: React.FC = () => {
     setOpenReportDialog(false);
   };
 
+  // Handle stats dialog
+  const handleOpenStatsDialog = () => {
+    loadClassStats();
+    setOpenStatsDialog(true);
+  };
+
+  const handleCloseStatsDialog = () => {
+    setOpenStatsDialog(false);
+  };
+
   // Generate report
-  const handleGenerateReport = () => {
-    // In a real app, you would generate a report here
-    handleCloseReportDialog();
-    setSnackbar({
-      open: true,
-      message: 'Report generated successfully',
-      severity: 'success'
-    });
+  const handleGenerateReport = async () => {
+    if (!reportStartDate || !reportEndDate) {
+      setSnackbar({
+        open: true,
+        message: 'Please select start and end dates',
+        severity: 'error'
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const filter = {
+        startDate: reportStartDate.toISOString().split('T')[0],
+        endDate: reportEndDate.toISOString().split('T')[0],
+        class: selectedClass || undefined,
+        section: selectedSection || undefined
+      };
+
+      const report = await attendanceService.generateAttendanceReport(filter);
+      
+      handleCloseReportDialog();
+      setSnackbar({
+        open: true,
+        message: 'Report generated successfully',
+        severity: 'success'
+      });
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Error generating report',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Export data
+  const handleExportData = async (format: 'csv' | 'excel' | 'pdf' = 'csv') => {
+    if (!reportStartDate || !reportEndDate) {
+      setSnackbar({
+        open: true,
+        message: 'Please select date range first',
+        severity: 'error'
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const filter = {
+        startDate: reportStartDate.toISOString().split('T')[0],
+        endDate: reportEndDate.toISOString().split('T')[0],
+        class: selectedClass || undefined,
+        section: selectedSection || undefined
+      };
+
+      const blob = await attendanceService.exportAttendanceData(filter, format);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `attendance_report_${filter.startDate}_${filter.endDate}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      setSnackbar({
+        open: true,
+        message: `Data exported as ${format.toUpperCase()}`,
+        severity: 'success'
+      });
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Error exporting data',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle snackbar close
@@ -377,67 +524,115 @@ const Attendance: React.FC = () => {
   const getAttendanceSummary = () => {
     if (!selectedDate || !selectedClass || !selectedSection) return null;
 
+    const dateStr = selectedDate.toISOString().split('T')[0];
     const existingRecord = attendanceRecords.find(
       record => 
-        record.date.toDateString() === selectedDate.toDateString() &&
+        record.date === dateStr &&
         record.class === selectedClass &&
         record.section === selectedSection
     );
 
-    if (!existingRecord) return null;
+    if (!existingRecord && students.length === 0) return null;
+
+    // Calculate current counts
+    const presentCount = students.filter(s => s.status === 'present').length;
+    const absentCount = students.filter(s => s.status === 'absent').length;
+    const lateCount = students.filter(s => s.status === 'late').length;
+    const leaveCount = students.filter(s => s.status === 'leave').length;
+    const totalStudents = students.length;
+
+    const data = existingRecord || {
+      present: presentCount,
+      absent: absentCount,
+      late: lateCount,
+      leave: leaveCount,
+      totalStudents
+    };
 
     return (
       <Box sx={{ mt: 2, mb: 2 }}>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" color="primary">
-                  {existingRecord.present}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Present ({Math.round((existingRecord.present / existingRecord.totalStudents) * 100)}%)
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" color="error">
-                  {existingRecord.absent}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Absent ({Math.round((existingRecord.absent / existingRecord.totalStudents) * 100)}%)
+            <Card sx={{ bgcolor: 'success.light', color: 'success.contrastText' }}>
+              <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                  <CheckCircle sx={{ mr: 1 }} />
+                  <Typography variant="h4" fontWeight="bold">
+                    {data.present}
+                  </Typography>
+                </Box>
+                <Typography variant="body2">
+                  Present ({totalStudents > 0 ? Math.round((data.present / totalStudents) * 100) : 0}%)
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" color="warning.main">
-                  {existingRecord.late}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Late ({Math.round((existingRecord.late / existingRecord.totalStudents) * 100)}%)
+            <Card sx={{ bgcolor: 'error.light', color: 'error.contrastText' }}>
+              <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                  <Cancel sx={{ mr: 1 }} />
+                  <Typography variant="h4" fontWeight="bold">
+                    {data.absent}
+                  </Typography>
+                </Box>
+                <Typography variant="body2">
+                  Absent ({totalStudents > 0 ? Math.round((data.absent / totalStudents) * 100) : 0}%)
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" color="info.main">
-                  {existingRecord.leave}
+            <Card sx={{ bgcolor: 'warning.light', color: 'warning.contrastText' }}>
+              <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                  <AccessTime sx={{ mr: 1 }} />
+                  <Typography variant="h4" fontWeight="bold">
+                    {data.late}
+                  </Typography>
+                </Box>
+                <Typography variant="body2">
+                  Late ({totalStudents > 0 ? Math.round((data.late / totalStudents) * 100) : 0}%)
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  On Leave ({Math.round((existingRecord.leave / existingRecord.totalStudents) * 100)}%)
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ bgcolor: 'info.light', color: 'info.contrastText' }}>
+              <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                  <EventBusy sx={{ mr: 1 }} />
+                  <Typography variant="h4" fontWeight="bold">
+                    {data.leave}
+                  </Typography>
+                </Box>
+                <Typography variant="body2">
+                  On Leave ({totalStudents > 0 ? Math.round((data.leave / totalStudents) * 100) : 0}%)
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
         </Grid>
+        
+        {totalStudents > 0 && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Overall Attendance Rate
+            </Typography>
+            <LinearProgress
+              variant="determinate"
+              value={(data.present / totalStudents) * 100}
+              sx={{ height: 8, borderRadius: 4 }}
+              color={
+                (data.present / totalStudents) >= 0.9 ? 'success' :
+                (data.present / totalStudents) >= 0.75 ? 'warning' : 'error'
+              }
+            />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {Math.round((data.present / totalStudents) * 100)}% attendance rate
+            </Typography>
+          </Box>
+        )}
       </Box>
     );
   };
@@ -563,54 +758,59 @@ const Attendance: React.FC = () => {
                   <Button
                     variant="contained"
                     color="primary"
-                    startIcon={<Save />}
+                    startIcon={saving ? <CircularProgress size={16} /> : <Save />}
                     onClick={handleSaveAttendance}
-                    disabled={!canTakeAttendance}
+                    disabled={!canTakeAttendance || saving}
+                    sx={{ minWidth: 140 }}
                   >
-                    Save Attendance
+                    {saving ? 'Saving...' : 'Save Attendance'}
                   </Button>
                 )}
               </Box>
               
               {getAttendanceSummary()}
               
-              <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-                <Chip
-                  icon={<Assignment />}
-                  label="Mark All Present"
-                  color="primary"
+              <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+                <Button
                   variant="outlined"
-                  onClick={() => {
-                    if (editMode) {
-                      setStudents(prevStudents =>
-                        prevStudents.map(student => ({
-                          ...student,
-                          status: 'present'
-                        }))
-                      );
-                    }
-                  }}
+                  color="success"
+                  startIcon={<CheckCircle />}
+                  onClick={handleMarkAllPresent}
                   disabled={!editMode}
-                  clickable={editMode}
-                />
-                <Chip
-                  icon={<AssignmentLate />}
-                  label="Mark All Absent"
+                  size="small"
+                >
+                  Mark All Present
+                </Button>
+                <Button
+                  variant="outlined"
                   color="error"
-                  variant="outlined"
-                  onClick={() => {
-                    if (editMode) {
-                      setStudents(prevStudents =>
-                        prevStudents.map(student => ({
-                          ...student,
-                          status: 'absent'
-                        }))
-                      );
-                    }
-                  }}
+                  startIcon={<Cancel />}
+                  onClick={handleMarkAllAbsent}
                   disabled={!editMode}
-                  clickable={editMode}
-                />
+                  size="small"
+                >
+                  Mark All Absent
+                </Button>
+                {editMode && (
+                  <Button
+                    variant="outlined"
+                    color="info"
+                    startIcon={<Refresh />}
+                    onClick={() => loadStudents()}
+                    size="small"
+                  >
+                    Reset
+                  </Button>
+                )}
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<Analytics />}
+                  onClick={handleOpenStatsDialog}
+                  size="small"
+                >
+                  Class Stats
+                </Button>
               </Box>
               
               <TableContainer>
@@ -739,8 +939,19 @@ const Attendance: React.FC = () => {
                 variant="outlined"
                 color="primary"
                 startIcon={<CloudDownload />}
+                onClick={() => handleExportData('csv')}
+                disabled={loading}
               >
-                Export Data
+                Export CSV
+              </Button>
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<CloudDownload />}
+                onClick={() => handleExportData('excel')}
+                disabled={loading}
+              >
+                Export Excel
               </Button>
             </Box>
           </Box>
@@ -799,46 +1010,148 @@ const Attendance: React.FC = () => {
             Recent Attendance Records
           </Typography>
 
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Class</TableCell>
-                  <TableCell>Section</TableCell>
-                  <TableCell>Total Students</TableCell>
-                  <TableCell>Present</TableCell>
-                  <TableCell>Absent</TableCell>
-                  <TableCell>Late</TableCell>
-                  <TableCell>On Leave</TableCell>
-                  <TableCell>Attendance %</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {attendanceRecords
-                  .filter(record => 
-                    (selectedClass ? record.class === selectedClass : true) &&
-                    (selectedSection ? record.section === selectedSection : true)
-                  )
-                  .sort((a, b) => b.date.getTime() - a.date.getTime())
-                  .map((record, index) => (
-                    <TableRow key={index} hover>
-                      <TableCell>{record.date.toLocaleDateString()}</TableCell>
-                      <TableCell>Class {record.class}</TableCell>
-                      <TableCell>{record.section}</TableCell>
-                      <TableCell>{record.totalStudents}</TableCell>
-                      <TableCell>{record.present}</TableCell>
-                      <TableCell>{record.absent}</TableCell>
-                      <TableCell>{record.late}</TableCell>
-                      <TableCell>{record.leave}</TableCell>
-                      <TableCell>
-                        {Math.round((record.present / record.totalStudents) * 100)}%
-                      </TableCell>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Class</TableCell>
+                      <TableCell>Section</TableCell>
+                      <TableCell>Total Students</TableCell>
+                      <TableCell>Present</TableCell>
+                      <TableCell>Absent</TableCell>
+                      <TableCell>Late</TableCell>
+                      <TableCell>On Leave</TableCell>
+                      <TableCell>Attendance %</TableCell>
+                      <TableCell>Actions</TableCell>
                     </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={10} align="center">
+                          <CircularProgress />
+                        </TableCell>
+                      </TableRow>
+                    ) : attendanceRecords
+                      .filter(record => 
+                        (selectedClass ? record.class === selectedClass : true) &&
+                        (selectedSection ? record.section === selectedSection : true)
+                      )
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                      .map((record, index) => (
+                        <TableRow key={index} hover>
+                          <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Avatar sx={{ width: 24, height: 24, mr: 1, fontSize: '0.8rem' }}>
+                                {record.class}
+                              </Avatar>
+                              Class {record.class}
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Chip label={record.section} size="small" variant="outlined" />
+                          </TableCell>
+                          <TableCell>
+                            <Badge badgeContent={record.totalStudents} color="primary">
+                              <Group />
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={record.present} 
+                              color="success" 
+                              size="small"
+                              icon={<CheckCircle />}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={record.absent} 
+                              color="error" 
+                              size="small"
+                              icon={<Cancel />}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={record.late} 
+                              color="warning" 
+                              size="small"
+                              icon={<AccessTime />}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={record.leave} 
+                              color="info" 
+                              size="small"
+                              icon={<EventBusy />}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <LinearProgress
+                                variant="determinate"
+                                value={Math.round((record.present / record.totalStudents) * 100)}
+                                sx={{ width: 60, mr: 1 }}
+                                color={
+                                  (record.present / record.totalStudents) >= 0.9 ? 'success' :
+                                  (record.present / record.totalStudents) >= 0.75 ? 'warning' : 'error'
+                                }
+                              />
+                              <Typography variant="body2">
+                                {Math.round((record.present / record.totalStudents) * 100)}%
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip title="View Details">
+                              <IconButton 
+                                size="small" 
+                                onClick={() => {
+                                  setSelectedClass(record.class);
+                                  setSelectedSection(record.section);
+                                  setSelectedDate(new Date(record.date));
+                                  setTabValue(0);
+                                }}
+                              >
+                                <ViewList />
+                              </IconButton>
+                            </Tooltip>
+                            {canManageAttendance && (
+                              <Tooltip title="Edit">
+                                <IconButton 
+                                  size="small" 
+                                  color="primary"
+                                  onClick={() => {
+                                    setSelectedClass(record.class);
+                                    setSelectedSection(record.section);
+                                    setSelectedDate(new Date(record.date));
+                                    setEditMode(true);
+                                    setTabValue(0);
+                                  }}
+                                >
+                                  <Edit />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    {!loading && attendanceRecords.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={10} align="center">
+                          <Typography variant="body2" color="text.secondary">
+                            No attendance records found
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
         </Paper>
       </TabPanel>
 
@@ -947,6 +1260,173 @@ const Attendance: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Class Statistics Dialog */}
+      <Dialog
+        open={openStatsDialog}
+        onClose={handleCloseStatsDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Analytics sx={{ mr: 1 }} />
+            Class Statistics - {selectedClass && selectedSection && `Class ${selectedClass} ${selectedSection}`}
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : classStats ? (
+            <Box>
+              <Grid container spacing={3} sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card sx={{ bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+                    <CardContent sx={{ textAlign: 'center' }}>
+                      <Group sx={{ fontSize: 40, mb: 1 }} />
+                      <Typography variant="h4" fontWeight="bold">
+                        {classStats.totalStudents}
+                      </Typography>
+                      <Typography variant="body2">Total Students</Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card sx={{ bgcolor: 'success.light', color: 'success.contrastText' }}>
+                    <CardContent sx={{ textAlign: 'center' }}>
+                      <TrendingUp sx={{ fontSize: 40, mb: 1 }} />
+                      <Typography variant="h4" fontWeight="bold">
+                        {classStats.averageAttendance}%
+                      </Typography>
+                      <Typography variant="body2">Average Attendance</Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card sx={{ bgcolor: 'info.light', color: 'info.contrastText' }}>
+                    <CardContent sx={{ textAlign: 'center' }}>
+                      <CalendarMonth sx={{ fontSize: 40, mb: 1 }} />
+                      <Typography variant="h4" fontWeight="bold">
+                        {classStats.totalDays}
+                      </Typography>
+                      <Typography variant="body2">Total Days</Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card sx={{ bgcolor: 'warning.light', color: 'warning.contrastText' }}>
+                    <CardContent sx={{ textAlign: 'center' }}>
+                      <Warning sx={{ fontSize: 40, mb: 1 }} />
+                      <Typography variant="h4" fontWeight="bold">
+                        {classStats.absentCount}
+                      </Typography>
+                      <Typography variant="body2">Total Absences</Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+              
+              <Divider sx={{ mb: 3 }} />
+              
+              <Typography variant="h6" gutterBottom>Detailed Breakdown</Typography>
+              <List>
+                <ListItem>
+                  <ListItemAvatar>
+                    <Avatar sx={{ bgcolor: 'success.main' }}>
+                      <CheckCircle />
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={`${classStats.presentCount} Present Records`}
+                    secondary={`${Math.round((classStats.presentCount / (classStats.totalStudents * classStats.totalDays)) * 100)}% of total possible attendance`}
+                  />
+                </ListItem>
+                <ListItem>
+                  <ListItemAvatar>
+                    <Avatar sx={{ bgcolor: 'error.main' }}>
+                      <Cancel />
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={`${classStats.absentCount} Absent Records`}
+                    secondary={`${Math.round((classStats.absentCount / (classStats.totalStudents * classStats.totalDays)) * 100)}% of total records`}
+                  />
+                </ListItem>
+                <ListItem>
+                  <ListItemAvatar>
+                    <Avatar sx={{ bgcolor: 'warning.main' }}>
+                      <AccessTime />
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={`${classStats.lateCount} Late Records`}
+                    secondary={`${Math.round((classStats.lateCount / (classStats.totalStudents * classStats.totalDays)) * 100)}% of total records`}
+                  />
+                </ListItem>
+                <ListItem>
+                  <ListItemAvatar>
+                    <Avatar sx={{ bgcolor: 'info.main' }}>
+                      <EventBusy />
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={`${classStats.leaveCount} Leave Records`}
+                    secondary={`${Math.round((classStats.leaveCount / (classStats.totalStudents * classStats.totalDays)) * 100)}% of total records`}
+                  />
+                </ListItem>
+              </List>
+            </Box>
+          ) : (
+            <Alert severity="info">No statistics available for the selected criteria.</Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseStatsDialog}>Close</Button>
+          {classStats && (
+            <Button variant="contained" startIcon={<Print />} onClick={() => window.print()}>
+              Print Stats
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Floating Action Button for Quick Actions */}
+      {selectedClass && selectedSection && selectedDate && (
+        <SpeedDial
+          ariaLabel="Attendance Actions"
+          sx={{ position: 'fixed', bottom: 16, right: 16 }}
+          icon={<SpeedDialIcon />}
+        >
+          <SpeedDialAction
+            icon={<Send />}
+            tooltipTitle="Send Report"
+            onClick={() => {
+              setSnackbar({
+                open: true,
+                message: 'Report sent successfully',
+                severity: 'success'
+              });
+            }}
+          />
+          <SpeedDialAction
+            icon={<Analytics />}
+            tooltipTitle="View Statistics"
+            onClick={handleOpenStatsDialog}
+          />
+          <SpeedDialAction
+            icon={<Print />}
+            tooltipTitle="Print Attendance"
+            onClick={() => window.print()}
+          />
+          <SpeedDialAction
+            icon={<CloudDownload />}
+            tooltipTitle="Quick Export"
+            onClick={() => handleExportData('csv')}
+          />
+        </SpeedDial>
+      )}
 
       {/* Snackbar for notifications */}
       <Snackbar

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -224,8 +224,38 @@ const sampleExamSchedules = generateExamSchedules();
 const Examinations: React.FC = () => {
   const { user, checkPermission } = useAuth();
   const [tabValue, setTabValue] = useState(0);
-  const [exams, setExams] = useState<Exam[]>(sampleExams);
-  const [examSchedules, setExamSchedules] = useState<ExamSchedule[]>(sampleExamSchedules);
+  const [exams, setExams] = useState<Exam[]>(() => {
+    const savedExams = localStorage.getItem('exams');
+    if (savedExams) {
+      try {
+        return JSON.parse(savedExams);
+      } catch (error) {
+        console.error('Error parsing saved exams:', error);
+      }
+    }
+    return sampleExams;
+  });
+  
+  const [examSchedules, setExamSchedules] = useState<ExamSchedule[]>(() => {
+    const savedSchedules = localStorage.getItem('examSchedules');
+    if (savedSchedules) {
+      try {
+        return JSON.parse(savedSchedules);
+      } catch (error) {
+        console.error('Error parsing saved exam schedules:', error);
+      }
+    }
+    return sampleExamSchedules;
+  });
+
+  // Save data to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('exams', JSON.stringify(exams));
+  }, [exams]);
+
+  useEffect(() => {
+    localStorage.setItem('examSchedules', JSON.stringify(examSchedules));
+  }, [examSchedules]);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');

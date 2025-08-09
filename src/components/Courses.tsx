@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -141,13 +141,45 @@ const subjects = ['Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', '
 
 const Courses: React.FC = () => {
   const { user, checkPermission } = useAuth();
-  const [courses, setCourses] = useState<Course[]>(sampleCourses);
+  
+  // Initialize courses state with sample data only once
+  const [courses, setCourses] = useState<Course[]>(() => {
+    // Check if there's saved data in localStorage
+    const savedCourses = localStorage.getItem('courses');
+    if (savedCourses) {
+      try {
+        return JSON.parse(savedCourses);
+      } catch (error) {
+        console.error('Error parsing saved courses:', error);
+      }
+    }
+    // Return initial sample data if no saved data
+    return sampleCourses;
+  });
+  
   const [tabValue, setTabValue] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClass, setFilterClass] = useState('');
   const [filterSubject, setFilterSubject] = useState('');
+
+  // Form state for dialog
+  const [formData, setFormData] = useState({
+    code: '',
+    title: '',
+    description: '',
+    credits: 0,
+    class: '',
+    subject: '',
+    teacher: '',
+    imageUrl: ''
+  });
+
+  // Save courses to localStorage whenever courses state changes
+  useEffect(() => {
+    localStorage.setItem('courses', JSON.stringify(courses));
+  }, [courses]);
 
   // Check permissions
   const canManageCourses = user?.role === 'admin' || checkPermission('manage_courses');
@@ -162,8 +194,28 @@ const Courses: React.FC = () => {
   const handleOpenDialog = (course?: Course) => {
     if (course) {
       setSelectedCourse(course);
+      setFormData({
+        code: course.code,
+        title: course.title,
+        description: course.description,
+        credits: course.credits,
+        class: course.class,
+        subject: course.subject,
+        teacher: course.teacher,
+        imageUrl: course.imageUrl || ''
+      });
     } else {
       setSelectedCourse(null);
+      setFormData({
+        code: '',
+        title: '',
+        description: '',
+        credits: 0,
+        class: '',
+        subject: '',
+        teacher: '',
+        imageUrl: ''
+      });
     }
     setOpenDialog(true);
   };
@@ -174,17 +226,42 @@ const Courses: React.FC = () => {
 
   // Handle course form submit
   const handleSaveCourse = () => {
-    // In a real app, we would save the course data
-    // and then update the state
-
-    // For demo purposes, just close the dialog
+    // Validate form
+    if (!formData.code || !formData.title || !formData.class || !formData.subject) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    if (selectedCourse) {
+      // Update existing course
+      const updatedCourses = courses.map(course =>
+        course.id === selectedCourse.id
+          ? { ...course, ...formData }
+          : course
+      );
+      setCourses(updatedCourses);
+      alert('Course updated successfully!');
+    } else {
+      // Add new course
+      const newCourse: Course = {
+        id: Date.now().toString(),
+        ...formData,
+        status: 'active'
+      };
+      setCourses([...courses, newCourse]);
+      alert('Course added successfully!');
+    }
+    
     handleCloseDialog();
   };
 
   // Handle course deletion
   const handleDeleteCourse = (id: string) => {
     // In a real app, we would confirm deletion first
-    setCourses(courses.filter(course => course.id !== id));
+    if (window.confirm('Are you sure you want to delete this course?')) {
+      setCourses(courses.filter(course => course.id !== id));
+      alert('Course deleted successfully!');
+    }
   };
 
   // Apply filters
@@ -216,16 +293,33 @@ const Courses: React.FC = () => {
         <Typography variant="h4" gutterBottom>
           Course Management
         </Typography>
-        {canManageCourses && (
-          <Button 
-            variant="contained" 
-            color="primary" 
-            startIcon={<Add />}
-            onClick={() => handleOpenDialog()}
-          >
-            Add New Course
-          </Button>
-        )}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {canManageCourses && (
+            <>
+              <Button 
+                variant="outlined" 
+                color="secondary"
+                onClick={() => {
+                  if (window.confirm('Reset to original sample data? This will remove all changes.')) {
+                    setCourses(sampleCourses);
+                    localStorage.removeItem('courses');
+                    alert('Data reset to original sample data!');
+                  }
+                }}
+              >
+                Reset Data
+              </Button>
+              <Button 
+                variant="contained" 
+                color="primary" 
+                startIcon={<Add />}
+                onClick={() => handleOpenDialog()}
+              >
+                Add New Course
+              </Button>
+            </>
+          )}
+        </Box>
       </Box>
 
       {/* Search and Filter Section */}
@@ -471,33 +565,103 @@ const Courses: React.FC = () => {
         </Grid>
       </TabPanel>
 
-      {/* Add/Edit Course Dialog (simplified) */}
+      {/* Add/Edit Course Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>{selectedCourse ? 'Edit Course' : 'Add New Course'}</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            This is a placeholder form. In a real application, this would be a complete form to add or edit course details.
-          </Typography>
-          <Grid container spacing={2}>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Course Title"
+                label="Course Title *"
                 variant="outlined"
-                defaultValue={selectedCourse?.title || ''}
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 margin="normal"
               />
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Course Code"
+                label="Course Code *"
                 variant="outlined"
-                defaultValue={selectedCourse?.code || ''}
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                 margin="normal"
               />
             </Grid>
-            {/* Additional form fields would go here */}
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Class *</InputLabel>
+                <Select
+                  value={formData.class}
+                  label="Class *"
+                  onChange={(e) => setFormData({ ...formData, class: e.target.value })}
+                >
+                  {classes.map((cls) => (
+                    <MenuItem key={cls} value={cls}>Class {cls}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Subject *</InputLabel>
+                <Select
+                  value={formData.subject}
+                  label="Subject *"
+                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                >
+                  {subjects.map((subject) => (
+                    <MenuItem key={subject} value={subject}>{subject}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Credits"
+                type="number"
+                variant="outlined"
+                value={formData.credits}
+                onChange={(e) => setFormData({ ...formData, credits: parseInt(e.target.value) || 0 })}
+                margin="normal"
+                inputProps={{ min: 0, max: 10 }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Teacher"
+                variant="outlined"
+                value={formData.teacher}
+                onChange={(e) => setFormData({ ...formData, teacher: e.target.value })}
+                margin="normal"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Image URL"
+                variant="outlined"
+                value={formData.imageUrl}
+                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                margin="normal"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                variant="outlined"
+                multiline
+                rows={3}
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                margin="normal"
+              />
+            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>

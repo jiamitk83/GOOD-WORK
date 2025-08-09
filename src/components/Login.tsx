@@ -9,7 +9,6 @@ import {
   Box,
   Alert,
   CircularProgress,
-  Divider,
   FormControl,
   InputLabel,
   Select,
@@ -284,59 +283,7 @@ const Login: React.FC = () => {
           </Box>
         </Box>
 
-        <Divider sx={{ width: '100%', my: 3 }}>
-          <Typography variant="body2" color="text.secondary">
-            Quick Demo Login
-          </Typography>
-        </Divider>
 
-        <Box sx={{ width: '100%' }}>
-          <Stack spacing={2}>
-            <Button 
-              variant="outlined" 
-              onClick={() => {
-                setUserRole('admin');
-                setLoginType('email');
-                setLoginId('admin@school.edu');
-                setPassword('admin123');
-              }}
-              startIcon={<SupervisorAccount />}
-              fullWidth
-            >
-              Demo Admin Login
-            </Button>
-            <Stack direction="row" spacing={1}>
-              <Button 
-                variant="outlined" 
-                onClick={() => {
-                  setUserRole('teacher');
-                  setLoginType('id');
-                  setLoginId('TCH001');
-                  setPassword('teacher123');
-                }}
-                startIcon={<MenuBook />}
-                size="small"
-                sx={{ flex: 1 }}
-              >
-                Teacher Demo
-              </Button>
-              <Button 
-                variant="outlined" 
-                onClick={() => {
-                  setUserRole('student');
-                  setLoginType('id');
-                  setLoginId('STU001');
-                  setPassword('student123');
-                }}
-                startIcon={<Person />}
-                size="small"
-                sx={{ flex: 1 }}
-              >
-                Student Demo
-              </Button>
-            </Stack>
-          </Stack>
-        </Box>
       </Paper>
     </Container>
   );

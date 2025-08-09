@@ -52,32 +52,79 @@ const Dashboard: React.FC = () => {
     nextHoliday: 'Autumn Break (Oct 15-20)'
   };
   
-  // Sample quick stats data
+  // Dynamically get total students, teachers, courses, and attendance rate from localStorage or fallback to sample data
+  let totalStudents = 0;
+  let totalTeachers = 0;
+  let totalCourses = 0;
+  let attendanceRate = '96%';
+  try {
+    // Students
+    const savedStudents = localStorage.getItem('students');
+    if (savedStudents) {
+      totalStudents = JSON.parse(savedStudents).length;
+    } else {
+      totalStudents = 5;
+    }
+    // Teachers
+    const savedTeachers = localStorage.getItem('teachers');
+    if (savedTeachers) {
+      totalTeachers = JSON.parse(savedTeachers).length;
+    } else {
+      totalTeachers = 3;
+    }
+    // Courses
+    const savedCourses = localStorage.getItem('courses');
+    if (savedCourses) {
+      totalCourses = JSON.parse(savedCourses).length;
+    } else {
+      totalCourses = 4;
+    }
+    // Attendance Rate (calculate if attendance data exists)
+    const savedAttendance = localStorage.getItem('attendance');
+    if (savedAttendance) {
+      const attendanceRecords = JSON.parse(savedAttendance);
+      let present = 0, total = 0;
+      attendanceRecords.forEach((rec: any) => {
+        if (rec.status === 'present') present++;
+        total++;
+      });
+      if (total > 0) {
+        attendanceRate = Math.round((present / total) * 100) + '%';
+      }
+    }
+  } catch {
+    totalStudents = 5;
+    totalTeachers = 3;
+    totalCourses = 4;
+    attendanceRate = '96%';
+  }
+
+  // Sample quick stats data (all dynamic)
   const quickStats = [
     {
       title: 'Total Students',
-      count: 1250,
+      count: totalStudents,
       icon: <PeopleAlt color="primary" />,
       change: '+5% from last month',
       bgColor: '#e3f2fd'
     },
     {
       title: 'Total Teachers',
-      count: 85,
+      count: totalTeachers,
       icon: <Person color="primary" />,
       change: '+2 new this month',
       bgColor: '#e8f5e9'
     },
     {
       title: 'Courses',
-      count: 48,
+      count: totalCourses,
       icon: <LibraryBooks color="primary" />,
       change: 'Across all grades',
       bgColor: '#fff8e1'
     },
     {
       title: 'Attendance Rate',
-      count: '96%',
+      count: attendanceRate,
       icon: <CheckCircle color="primary" />,
       change: '+2% from last month',
       bgColor: '#f3e5f5'

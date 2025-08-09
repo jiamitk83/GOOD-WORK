@@ -5,6 +5,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  userId: string;
   role: string;
   permissions?: string[];
 }
@@ -42,27 +43,30 @@ interface AuthProviderProps {
 const USERS = [
   {
     id: '1',
-    name: 'Admin User',
-    email: 'admin@example.com',
-    password: 'admin123',
+    name: 'System Administrator',
+    email: 'admin@school.edu',
+    userId: 'ADM001',
+    password: 'SecureAdmin2024!',
     role: 'admin',
-    permissions: ['manage_users', 'manage_roles', 'view_dashboard', 'manage_students', 'manage_teachers']
+    permissions: ['manage_users', 'manage_roles', 'view_dashboard', 'manage_students', 'manage_teachers', 'manage_timetable', 'view_timetable', 'take_attendance', 'view_attendance', 'manage_attendance', 'manage_grades', 'view_grades', 'manage_school_settings', 'manage_fees', 'collect_fees', 'view_fees']
   },
   {
     id: '2',
-    name: 'Teacher User',
-    email: 'teacher@example.com',
-    password: 'teacher123',
+    name: 'Faculty Member',
+    email: 'teacher@school.edu',
+    userId: 'TCH001',
+    password: 'SecureTeacher2024!',
     role: 'teacher',
-    permissions: ['view_dashboard', 'view_students', 'manage_grades']
+    permissions: ['view_dashboard', 'view_students', 'manage_grades', 'view_timetable', 'take_attendance', 'view_attendance', 'view_fees']
   },
   {
     id: '3',
-    name: 'Student User',
-    email: 'student@example.com',
-    password: 'student123',
+    name: 'Student Member',
+    email: 'student@school.edu',
+    userId: 'STU001',
+    password: 'SecureStudent2024!',
     role: 'student',
-    permissions: ['view_dashboard', 'view_grades', 'view_courses']
+    permissions: ['view_dashboard', 'view_grades', 'view_courses', 'view_timetable', 'view_attendance']
   }
 ];
 
@@ -87,7 +91,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // Login function
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (loginIdentifier: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
 
@@ -95,8 +99,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Simulate API request delay
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Find user with matching credentials
-      const foundUser = USERS.find(u => u.email === email && u.password === password);
+      // Find user with matching credentials (support both email and userId)
+      const foundUser = USERS.find(u => 
+        (u.email === loginIdentifier || u.userId === loginIdentifier) && 
+        u.password === password
+      );
 
       if (foundUser) {
         const { password: _password, ...userWithoutPassword } = foundUser;
@@ -105,7 +112,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsLoading(false);
         return true;
       } else {
-        setError('Invalid email or password');
+        setError('Invalid credentials');
         setIsLoading(false);
         return false;
       }
@@ -141,13 +148,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       // In a real app, we would send this to a backend API
-      // For demo, we'll just create a new user with student role
+      // For production, we'll create a new user with student role
       const newUser = {
         id: `${USERS.length + 1}`,
         name,
         email,
+        userId: `STU${String(USERS.length + 1).padStart(3, '0')}`,
         role: 'student',
-        permissions: ['view_dashboard', 'view_grades', 'view_courses']
+        permissions: ['view_dashboard', 'view_grades', 'view_courses', 'view_timetable']
       };
 
       setUser(newUser);

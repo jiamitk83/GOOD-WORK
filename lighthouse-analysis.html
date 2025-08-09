@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School ERP System - Lighthouse Analysis</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .score-card {
+            display: inline-block;
+            margin: 10px;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            min-width: 120px;
+        }
+        .excellent { background: #0d8043; }
+        .good { background: #ffa400; }
+        .poor { background: #ff4e42; }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .check-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+        .good-practice { color: #0d8043; }
+        .needs-attention { color: #ffa400; }
+        .critical { color: #ff4e42; }
+        .info-box {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 School ERP System - Lighthouse Performance Analysis</h1>
+    
+    <div class="section">
+        <h2>📊 Performance Score Breakdown</h2>
+        <p><strong>Local Development:</strong> <a href="http://localhost:3000/" target="_blank" rel="noopener">http://localhost:3000/</a></p>
+        <p><strong>Production Site:</strong> <a href="https://goodschooerp.netlify.app" target="_blank" rel="noopener">https://goodschooerp.netlify.app</a> <span class="critical">⚠️ Currently unavailable (404)</span></p>
+        
+        <h3>Expected Performance Categories:</h3>
+        <div class="score-card excellent">
+            <div>Performance</div>
+            <div>85-95</div>
+        </div>
+        <div class="score-card excellent">
+            <div>Accessibility</div>
+            <div>90-95</div>
+        </div>
+        <div class="score-card good">
+            <div>Best Practices</div>
+            <div>80-90</div>
+        </div>
+        <div class="score-card good">
+            <div>SEO</div>
+            <div>75-85</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🔍 Performance Analysis Tools</h2>
+        <div class="check-item">
+            <strong>Google PageSpeed Insights (Local):</strong>
+            <a href="https://pagespeed.web.dev/report?url=http://localhost:3000/" target="_blank" rel="noopener">
+                Run Local Analysis
+            </a>
+        </div>
+        <div class="check-item">
+            <strong>Google PageSpeed Insights (Production):</strong>
+            <a href="https://pagespeed.web.dev/report?url=https://goodschooerp.netlify.app" target="_blank" rel="noopener">
+                Run Production Analysis
+            </a> <span class="critical">⚠️ Site currently unavailable</span>
+        </div>
+        <div class="check-item">
+            <strong>Mobile PageSpeed (Local):</strong>
+            <a href="https://pagespeed.web.dev/report?url=http://localhost:3000/&form_factor=mobile" target="_blank" rel="noopener">
+                Run Mobile Analysis
+            </a>
+        </div>
+        <div class="check-item">
+            <strong>GTmetrix:</strong>
+            <a href="https://gtmetrix.com/reports/goodschooerp.netlify.app/" target="_blank" rel="noopener">
+                GTmetrix Analysis
+            </a>
+        </div>
+        <div class="check-item">
+            <strong>WebPageTest:</strong>
+            <a href="https://www.webpagetest.org/result/https://goodschooerp.netlify.app/" target="_blank" rel="noopener">
+                WebPageTest Analysis
+            </a>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>✅ Built-in Optimizations</h2>
+        
+        <h3 class="good-practice">Frontend Performance:</h3>
+        <div class="check-item good-practice">✅ Vite Build System - Fast bundling and tree-shaking</div>
+        <div class="check-item good-practice">✅ Material-UI Tree Shaking - Only used components</div>
+        <div class="check-item good-practice">✅ TypeScript Compilation - Optimized code</div>
+        <div class="check-item good-practice">✅ ES2020+ Modern JavaScript</div>
+
+        <h3 class="good-practice">Mobile Optimization:</h3>
+        <div class="check-item good-practice">✅ Responsive Design - Mobile-first approach</div>
+        <div class="check-item good-practice">✅ PWA Manifest - App installation</div>
+        <div class="check-item good-practice">✅ Touch-friendly Interface</div>
+        <div class="check-item good-practice">✅ Mobile Layout Component</div>
+
+        <h3 class="good-practice">Netlify CDN Benefits:</h3>
+        <div class="check-item good-practice">✅ Global CDN - Fast worldwide delivery</div>
+        <div class="check-item good-practice">✅ Automatic HTTPS - Security by default</div>
+        <div class="check-item good-practice">✅ HTTP/2 Support - Efficient loading</div>
+        <div class="check-item good-practice">✅ Asset Caching - Browser optimization</div>
+    </div>
+
+    <div class="section">
+        <h2>🎯 Core Web Vitals Analysis</h2>
+        
+        <h3>Expected Metrics:</h3>
+        <div class="check-item">
+            <strong>Largest Contentful Paint (LCP):</strong> 
+            <span class="good-practice">Expected: &lt; 2.5s (Good)</span>
+        </div>
+        <div class="check-item">
+            <strong>First Input Delay (FID):</strong> 
+            <span class="good-practice">Expected: &lt; 100ms (Good)</span>
+        </div>
+        <div class="check-item">
+            <strong>Cumulative Layout Shift (CLS):</strong> 
+            <span class="good-practice">Expected: &lt; 0.1 (Good)</span>
+        </div>
+        <div class="check-item">
+            <strong>First Contentful Paint (FCP):</strong> 
+            <span class="good-practice">Expected: &lt; 1.8s (Good)</span>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📱 Mobile-Specific Features</h2>
+        
+        <div class="check-item good-practice">
+            <strong>Responsive Breakpoints:</strong> Material-UI responsive design system
+        </div>
+        <div class="check-item good-practice">
+            <strong>Touch Navigation:</strong> Mobile drawer navigation implemented
+        </div>
+        <div class="check-item good-practice">
+            <strong>App-like Experience:</strong> PWA features for mobile installation
+        </div>
+        <div class="check-item good-practice">
+            <strong>Viewport Optimization:</strong> Proper mobile viewport configuration
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🔧 Potential Improvements</h2>
+        
+        <h3 class="needs-attention">SEO Enhancements:</h3>
+        <div class="check-item needs-attention">⚠️ Add meta description tags</div>
+        <div class="check-item needs-attention">⚠️ Implement Open Graph tags</div>
+        <div class="check-item needs-attention">⚠️ Add structured data markup</div>
+        <div class="check-item needs-attention">⚠️ Optimize page titles for search</div>
+
+        <h3 class="needs-attention">Performance Optimizations:</h3>
+        <div class="check-item needs-attention">⚠️ Implement lazy loading for heavy components</div>
+        <div class="check-item needs-attention">⚠️ Add service worker for offline caching</div>
+        <div class="check-item needs-attention">⚠️ Optimize image formats (WebP)</div>
+        <div class="check-item needs-attention">⚠️ Enable code splitting for routes</div>
+    </div>
+
+    <div class="section">
+        <h2>🚀 Test Your Site Now</h2>
+        <p>Click the links above to run comprehensive Lighthouse audits and get detailed performance scores!</p>
+        
+        <div class="info-box">
+            <h3>Quick Access Links:</h3>
+            <ul>
+                <li><a href="http://localhost:3000/" target="_blank" rel="noopener"><strong>🖥️ Local Development Server</strong></a></li>
+                <li><a href="https://pagespeed.web.dev/report?url=http://localhost:3000/" target="_blank" rel="noopener"><strong>📊 PageSpeed Insights - Local</strong></a></li>
+                <li><a href="https://pagespeed.web.dev/report?url=http://localhost:3000/&form_factor=mobile" target="_blank" rel="noopener"><strong>📱 PageSpeed Insights - Mobile</strong></a></li>
+                <li><a href="https://goodschooerp.netlify.app" target="_blank" rel="noopener"><strong>🌐 Production Site</strong></a> <span class="critical">⚠️ Currently down</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Simple performance monitoring
+        window.addEventListener('load', () => {
+            if ('performance' in window) {
+                setTimeout(() => {
+                    const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+                    const dcl = performance.timing.domContentLoadedEventEnd - performance.timing.navigationStart;
+                    console.log(`Page Load Time: ${loadTime}ms`);
+                    console.log(`DOM Content Loaded: ${dcl}ms`);
+                    
+                    const perfDiv = document.createElement('div');
+                    perfDiv.className = 'check-item good-practice';
+                    perfDiv.innerHTML = `<strong>Live Performance:</strong> Page loaded in ${loadTime}ms, DOM ready in ${dcl}ms`;
+                    document.querySelector('.section:last-child').appendChild(perfDiv);
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>

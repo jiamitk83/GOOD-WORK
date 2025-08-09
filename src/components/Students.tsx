@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -165,7 +165,22 @@ const sections = ['A', 'B', 'C', 'D'];
 
 const Students: React.FC = () => {
   const { user, checkPermission } = useAuth();
-  const [students, setStudents] = useState<Student[]>(sampleStudents);
+  
+  // Initialize students state with sample data only once
+  const [students, setStudents] = useState<Student[]>(() => {
+    // Check if there's saved data in localStorage
+    const savedStudents = localStorage.getItem('students');
+    if (savedStudents) {
+      try {
+        return JSON.parse(savedStudents);
+      } catch (error) {
+        console.error('Error parsing saved students:', error);
+      }
+    }
+    // Return initial sample data if no saved data
+    return sampleStudents;
+  });
+  
   const [tabValue, setTabValue] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -174,6 +189,26 @@ const Students: React.FC = () => {
   const [filterSection, setFilterSection] = useState('');
   const [sortField, setSortField] = useState<keyof Student>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // Form state for dialog
+  const [formData, setFormData] = useState({
+    name: '',
+    rollNumber: '',
+    class: '',
+    section: '',
+    gender: '',
+    dob: '',
+    fatherName: '',
+    motherName: '',
+    address: '',
+    contactNumber: '',
+    email: ''
+  });
+
+  // Save students to localStorage whenever students state changes
+  React.useEffect(() => {
+    localStorage.setItem('students', JSON.stringify(students));
+  }, [students]);
 
   // Check permissions
   const canManageStudents = user?.role === 'admin' || checkPermission('manage_students');
@@ -188,8 +223,34 @@ const Students: React.FC = () => {
   const handleOpenDialog = (student?: Student) => {
     if (student) {
       setSelectedStudent(student);
+      setFormData({
+        name: student.name,
+        rollNumber: student.rollNumber,
+        class: student.class,
+        section: student.section,
+        gender: student.gender,
+        dob: student.dob,
+        fatherName: student.fatherName,
+        motherName: student.motherName,
+        address: student.address,
+        contactNumber: student.contactNumber,
+        email: student.email
+      });
     } else {
       setSelectedStudent(null);
+      setFormData({
+        name: '',
+        rollNumber: '',
+        class: '',
+        section: '',
+        gender: '',
+        dob: '',
+        fatherName: '',
+        motherName: '',
+        address: '',
+        contactNumber: '',
+        email: ''
+      });
     }
     setOpenDialog(true);
   };
@@ -200,17 +261,43 @@ const Students: React.FC = () => {
 
   // Handle student form submit
   const handleSaveStudent = () => {
-    // In a real app, we would save the student data
-    // and then update the state
-
-    // For demo purposes, just close the dialog
+    // Validate form
+    if (!formData.name || !formData.rollNumber || !formData.class || !formData.section) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    if (selectedStudent) {
+      // Update existing student
+      const updatedStudents = students.map(student =>
+        student.id === selectedStudent.id
+          ? { ...student, ...formData }
+          : student
+      );
+      setStudents(updatedStudents);
+      alert('Student updated successfully!');
+    } else {
+      // Add new student
+      const newStudent: Student = {
+        id: Date.now().toString(),
+        ...formData,
+        admissionDate: new Date().toISOString().split('T')[0],
+        status: 'active'
+      };
+      setStudents([...students, newStudent]);
+      alert('Student added successfully!');
+    }
+    
     handleCloseDialog();
   };
 
   // Handle student deletion
   const handleDeleteStudent = (id: string) => {
     // In a real app, we would confirm deletion first
-    setStudents(students.filter(student => student.id !== id));
+    if (window.confirm('Are you sure you want to delete this student?')) {
+      setStudents(students.filter(student => student.id !== id));
+      alert('Student deleted successfully!');
+    }
   };
 
   // Handle sorting
@@ -259,16 +346,33 @@ const Students: React.FC = () => {
         <Typography variant="h4" gutterBottom>
           Student Management
         </Typography>
-        {canManageStudents && (
-          <Button 
-            variant="contained" 
-            color="primary" 
-            startIcon={<Add />}
-            onClick={() => handleOpenDialog()}
-          >
-            Add New Student
-          </Button>
-        )}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {canManageStudents && (
+            <>
+              <Button 
+                variant="outlined" 
+                color="secondary"
+                onClick={() => {
+                  if (window.confirm('Reset to original sample data? This will remove all changes.')) {
+                    setStudents(sampleStudents);
+                    localStorage.removeItem('students');
+                    alert('Data reset to original sample data!');
+                  }
+                }}
+              >
+                Reset Data
+              </Button>
+              <Button 
+                variant="contained" 
+                color="primary" 
+                startIcon={<Add />}
+                onClick={() => handleOpenDialog()}
+              >
+                Add New Student
+              </Button>
+            </>
+          )}
+        </Box>
       </Box>
 
       {/* Search and Filter Section */}
@@ -535,33 +639,130 @@ const Students: React.FC = () => {
         </Grid>
       </TabPanel>
 
-      {/* Add/Edit Student Dialog (simplified) */}
+      {/* Add/Edit Student Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>{selectedStudent ? 'Edit Student' : 'Add New Student'}</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            This is a placeholder form. In a real application, this would be a complete form to add or edit student details.
-          </Typography>
-          <Grid container spacing={2}>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Student Name"
+                label="Student Name *"
                 variant="outlined"
-                defaultValue={selectedStudent?.name || ''}
-                margin="normal"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Roll Number"
+                label="Roll Number *"
                 variant="outlined"
-                defaultValue={selectedStudent?.rollNumber || ''}
-                margin="normal"
+                value={formData.rollNumber}
+                onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value })}
               />
             </Grid>
-            {/* Additional form fields would go here */}
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Class *</InputLabel>
+                <Select
+                  value={formData.class}
+                  label="Class *"
+                  onChange={(e) => setFormData({ ...formData, class: e.target.value })}
+                >
+                  {classes.map((cls) => (
+                    <MenuItem key={cls} value={cls}>Class {cls}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Section *</InputLabel>
+                <Select
+                  value={formData.section}
+                  label="Section *"
+                  onChange={(e) => setFormData({ ...formData, section: e.target.value })}
+                >
+                  {sections.map((section) => (
+                    <MenuItem key={section} value={section}>Section {section}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Gender</InputLabel>
+                <Select
+                  value={formData.gender}
+                  label="Gender"
+                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                >
+                  <MenuItem value="Male">Male</MenuItem>
+                  <MenuItem value="Female">Female</MenuItem>
+                  <MenuItem value="Other">Other</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Date of Birth"
+                type="date"
+                variant="outlined"
+                value={formData.dob}
+                onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Father's Name"
+                variant="outlined"
+                value={formData.fatherName}
+                onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Mother's Name"
+                variant="outlined"
+                value={formData.motherName}
+                onChange={(e) => setFormData({ ...formData, motherName: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Contact Number"
+                variant="outlined"
+                value={formData.contactNumber}
+                onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Email"
+                type="email"
+                variant="outlined"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Address"
+                variant="outlined"
+                multiline
+                rows={2}
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              />
+            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>

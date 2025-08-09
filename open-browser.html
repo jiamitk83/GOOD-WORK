@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School ERP System - Browser View</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        .browser-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .toolbar {
+            display: flex;
+            align-items: center;
+            background-color: #f5f5f5;
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .nav-button {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 8px;
+            width: 32px;
+            height: 32px;
+            border-radius: 16px;
+        }
+        .nav-button:hover {
+            background-color: #e0e0e0;
+        }
+        .address-bar {
+            flex-grow: 1;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 16px;
+            font-size: 14px;
+        }
+        .content-area {
+            flex-grow: 1;
+            border: none;
+            width: 100%;
+            height: 100%;
+        }
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="browser-container">
+        <div class="toolbar">
+            <button class="nav-button" id="back-button" title="Back">←</button>
+            <button class="nav-button" id="forward-button" title="Forward">→</button>
+            <button class="nav-button" id="refresh-button" title="Refresh">↻</button>
+            <button class="nav-button" id="home-button" title="Home">⌂</button>
+            <input type="text" class="address-bar" id="address-bar" placeholder="Enter URL">
+            <button class="nav-button" id="go-button" title="Go">→</button>
+        </div>
+        <iframe id="content-frame" class="content-area" src="" sandbox="allow-same-origin allow-scripts allow-popups allow-forms"></iframe>
+        <div id="loading-indicator" class="loading" style="display: none;">Loading...</div>
+    </div>
+
+    <script>
+        // Initial variables
+        const defaultUrl = 'https://example.com';
+        const frame = document.getElementById('content-frame');
+        const addressBar = document.getElementById('address-bar');
+        const loading = document.getElementById('loading-indicator');
+        const backButton = document.getElementById('back-button');
+        const forwardButton = document.getElementById('forward-button');
+        const refreshButton = document.getElementById('refresh-button');
+        const homeButton = document.getElementById('home-button');
+        const goButton = document.getElementById('go-button');
+        
+        let history = [defaultUrl];
+        let currentIndex = 0;
+
+        // Initialize
+        addressBar.value = defaultUrl;
+        navigate(defaultUrl);
+
+        // Event listeners
+        addressBar.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                navigate(addressBar.value);
+            }
+        });
+
+        goButton.addEventListener('click', () => {
+            navigate(addressBar.value);
+        });
+
+        backButton.addEventListener('click', navigateBack);
+        forwardButton.addEventListener('click', navigateForward);
+        refreshButton.addEventListener('click', refresh);
+        homeButton.addEventListener('click', goHome);
+
+        // Functions
+        function normalizeUrl(url) {
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                return `https://${url}`;
+            }
+            return url;
+        }
+
+        function navigate(url) {
+            const normalizedUrl = normalizeUrl(url);
+            addressBar.value = normalizedUrl;
+            
+            showLoading();
+            
+            // In a real implementation, we would load the URL in the iframe
+            // For demo purposes, we'll just show loading and then simulate completion
+            setTimeout(() => {
+                frame.src = normalizedUrl;
+                hideLoading();
+                
+                // Update history if it's a new URL
+                if (normalizedUrl !== history[currentIndex]) {
+                    history = history.slice(0, currentIndex + 1);
+                    history.push(normalizedUrl);
+                    currentIndex = history.length - 1;
+                }
+                
+                updateNavButtons();
+            }, 1000);
+        }
+
+        function navigateBack() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                navigate(history[currentIndex]);
+            }
+        }
+
+        function navigateForward() {
+            if (currentIndex < history.length - 1) {
+                currentIndex++;
+                navigate(history[currentIndex]);
+            }
+        }
+
+        function refresh() {
+            navigate(history[currentIndex]);
+        }
+
+        function goHome() {
+            navigate(defaultUrl);
+        }
+
+        function showLoading() {
+            frame.style.display = 'none';
+            loading.style.display = 'flex';
+        }
+
+        function hideLoading() {
+            loading.style.display = 'none';
+            frame.style.display = 'block';
+        }
+
+        function updateNavButtons() {
+            backButton.disabled = currentIndex <= 0;
+            forwardButton.disabled = currentIndex >= history.length - 1;
+        }
+    </script>
+</body>
+</html>

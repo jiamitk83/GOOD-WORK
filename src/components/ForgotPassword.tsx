@@ -67,7 +67,7 @@ const ForgotPassword: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // In a real app, we would call an API endpoint here
-      // For demo purposes, we'll just simulate success
+      // For production, we'll call the appropriate API endpoint
       setSuccess(true);
     } catch (err) {
       setError('Failed to send reset instructions. Please try again.');

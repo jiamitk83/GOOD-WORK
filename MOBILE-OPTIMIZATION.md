@@ -66,7 +66,7 @@ getMobileFieldProps(isMobile)
 - Larger touch targets for role selection
 - Mobile-optimized form layout
 - Better visual hierarchy on small screens
-- Demo credential buttons for easy testing
+- Secure authentication interface
 
 ### 4. **Admin Panel Mobile Cards**
 - Card-based user display instead of tables

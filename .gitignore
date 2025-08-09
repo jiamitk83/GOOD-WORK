@@ -40,6 +40,10 @@ temp.txt
 *.bak
 *.new
 
+# Problematic directories
+BIG-DOG/
+BIG-DIG/
+
 # Logs
 logs
 *.log
